@@ -5,23 +5,28 @@
   </head>
   <body>
     <h1>tone.js test!!!</h1>
-    <img src="./assets/img/image.png" width="40px;">
 
     <div>
       <input type="range" id="distance" name="distance" min="0" max="100" step="1">
       <label for="distance">distance</label>
     </div>
 
-
     <div>
       <input type="range" id="randAmt" name="randAmt" min="0" max="1" step="0.05">
       <label for="randAmt">randAmt</label>
     </div>
+    <h2>Listener position</h2>
 
-    <br>
-    <textarea id="text">collaboration</textarea>
-    <br>
-    <button id="doCrazy">CRAZY</button>
+    <div>
+      <input type="range" id="listenerX" name="listenerX" min="-1" max="1" step="0.05">
+      <label for="listenerX">listenerX</label>
+    </div>
+    <div>
+      <input type="range" id="listenerY" name="listenerY" min="-1" max="1" step="0.05">
+      <label for="listenerY">listenerY</label>
+    </div>
+
+    <button id="doCrazy">PLAY</button>
     <button id="stop">STOP</button>
   </body>
 </html>

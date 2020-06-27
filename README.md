@@ -1,5 +1,7 @@
 # Run in develop mode
 
+- Copy sound files to `assets/sounds`
+
 ```
 $ npm install
 $ npm run start
@@ -7,8 +9,6 @@ $ npm run start
 
 # TODO
 
-- Get full set of macvoice aiff files off of a PI
 - Attach to word engine
-- Add spatialization to `Speaker`
-- Randomize grain sizes
+- Smooth out speaker location changes `Speaker`
 - Stutter backwards

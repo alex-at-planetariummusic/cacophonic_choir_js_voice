@@ -11,6 +11,19 @@ export class Speaker {
      */
     constructor(randomAmount) {
         this.randomAmount = isNaN(randomAmount) ? 0.5 : randomAmount;
+
+        this._panner3d = new Tone.Panner3D().toMaster();
+
+        // temporary stuff
+        this._words = [
+            'four',
+            'fostering',
+            'fountains',
+            'in',
+            'fast',
+            'collaboration',
+        ]
+        this._nextWordIndex = 0;
     }
 
     /**
@@ -22,12 +35,15 @@ export class Speaker {
     }
 
     stop() {
-        console.log('stop()');
+        // console.log('stop()');
         this._isPlaying = false;
     }
 
+
     _getNextWord() {
-        return 'collaboration';
+        const word =  this._words[this._nextWordIndex];
+        this._nextWordIndex = (this._nextWordIndex + 1) % this._words.length;
+        return word;
     }
 
 
@@ -39,19 +55,31 @@ export class Speaker {
                     resolve(buffer);
                 },
                 function (e) {
-                    console.error('could not load file', e);
+                    // Maybe TODO: keep track of 404s so we don't keep trying to get those words.
+                    // Not necessary if we make sure our stories and audio files are in sync.
                     reject(e)
                 });
         });
     }
 
-    async _playWord(word) {
-        let buffer = await this._loadBuffer(word);
-        // TODO: length should just be local var?
-        this._playGrainLoop(buffer, 0, 0.2)
+    async _playWord() {
+        let buffer;
+        try {
+            buffer = await this._loadBuffer(this._getNextWord());
+        } catch(e) {
+            console.error('Could get word; trying the next one', e);
+            this._playWord();
+        }
+        this._playGrainLoop(buffer, 0)
     }
 
-    _playGrainLoop(buffer, time, length) {
+    /**
+     * @param {Tone.Buffer} buffer - The buffer to play
+     * @param {number} time - Location in buffer to start playing from
+     */
+    _playGrainLoop(buffer, time) {
+        // Note: circular function calls; call stack will keep growing until word is done playing
+        console.trace();
         if (!this._isPlaying) {
             return;
         }
@@ -63,27 +91,27 @@ export class Speaker {
         // calculate the grain length
         // range from 0.1--0.4
         grainLength = 0.1 + Math.random() * 0.3;
-        console.log('grainLength:', grainLength);
+        // console.log('grainLength:', grainLength);
 
-        // TODO: randomize length
         // TODO: scale repeat (don't always repeat at randomAmount==1)
         let rand = Math.random();
-        if (rand < this.randomAmount) {
+        // when randomAmount == 1, 50% chance of repeating grain
+        // when randomAmount == 0, 0% chance of repeating grain
+        if (rand * 2 < this.randomAmount) {
             //repeat
-            console.log('repeat', this.randomAmount);
-            // grainLength = length;
+            console.log('repeat', rand, this.randomAmount);
             nextTime = time;
         } else {
-            // fixed for now
-            console.log('norepeat');
-            // grainLength = length;
+            // console.log('norepeat');
             nextTime = time + grainLength
         }
 
-        if (nextTime > buffer.duration) {
-            console.log('end; on to next word');
+        // play next word if the next time would be after the end of the buffer, or 
+        // this grain has played to the end of the buffer
+        if (nextTime > buffer.duration || time + grainLength >= buffer.duration) {
+            // console.log('end; on to next word');
             // TODO: fetch next word before this word ends
-            this._playWord(this._getNextWord());
+            this._playWord();
             return;
         }
 
@@ -92,7 +120,7 @@ export class Speaker {
             decay: 0,
             sustain: 1.0,
             release: AMP_ENV_RELEASE_TIME
-        }).toMaster();
+        }).connect(this._panner3d);
 
         new Tone.Player(buffer.get())
             .connect(ampEnv)

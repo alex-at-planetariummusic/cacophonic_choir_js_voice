@@ -5,20 +5,23 @@ import { Speaker } from './speaker';
 const stopButton = document.getElementById('stop');
 const distanceInput = document.getElementById('distance');
 const randAmtInput = document.getElementById('randAmt');
-const text = document.getElementById('text');
 const crazyButton = document.getElementById('doCrazy');
-
-const context = new Tone.Context();
-
-
-/**
- * Play unmodified when closer than this
- */
-const START_SOUND_PROCESSING_AT_DISTANCE = 30;
+const listenerX = document.getElementById('listenerX');
+const listenerY = document.getElementById('listenerY');
 
 function getRandomAmount() {
     return distance / 100;
 }
+
+function setListenerPosition() {
+    console.log('setting listener position', listenerX.value, listenerY.value);
+    // not sure if casting to Number is necessary
+    // Tone.Listener.positionX.targetRampTo(Number(listenerX.value), 10);
+    Tone.Listener.setPosition(Number(listenerX.value/1), Number(listenerY.value * 10), 0.1);
+    console.log(Tone.Listener.positionX);
+}
+listenerX.addEventListener('input', setListenerPosition);
+listenerY.addEventListener('input', setListenerPosition);
 
 
 let distance = 30;
@@ -26,9 +29,6 @@ let distance = 30;
 distanceInput.addEventListener('input', function(v) {
     distance = distanceInput.value;
     console.log('distance:', distanceInput.value);
-    // if (speaker) {
-    //     speaker.randomAmount = getRandomAmount()
-    // }
 });
 
 
