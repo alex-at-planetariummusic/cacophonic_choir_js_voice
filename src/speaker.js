@@ -3,6 +3,10 @@ import * as Tone from "tone";
 const context = new Tone.Context();
 const AMP_ENV_RELEASE_TIME = 0.1;
 
+// const MIN_GRAIN_LENGTH_S = 0.1;
+const MIN_GRAIN_LENGTH_S = 0.05;
+const MAX_GRAIN_LENGTH_S = 0.4;
+
 export class Speaker {
     /**
      * TODO add location
@@ -31,7 +35,10 @@ export class Speaker {
      */
     start() {
         this._isPlaying = true;
-        this._playWord(this._getNextWord());
+        if (!this._nextBufferPromise) {
+            this._queueNextWord();
+        }
+        this._playNextWord();
     }
 
     stop() {
@@ -43,6 +50,7 @@ export class Speaker {
     _getNextWord() {
         const word =  this._words[this._nextWordIndex];
         this._nextWordIndex = (this._nextWordIndex + 1) % this._words.length;
+        console.log('NEXT WORD:', word);
         return word;
     }
 
@@ -57,20 +65,42 @@ export class Speaker {
                 function (e) {
                     // Maybe TODO: keep track of 404s so we don't keep trying to get those words.
                     // Not necessary if we make sure our stories and audio files are in sync.
+                    console.log('FAILED TO LOAD BUFFER:', e);
                     reject(e)
                 });
         });
     }
 
-    async _playWord() {
-        let buffer;
-        try {
-            buffer = await this._loadBuffer(this._getNextWord());
-        } catch(e) {
-            console.error('Could get word; trying the next one', e);
-            this._playWord();
+    _queueNextWord() {
+        // TODO: if network goes down or something else bad happens, this could loop forever
+        this._nextBufferPromise = this._loadBuffer(this._getNextWord())
+            .catch(e => {
+                this._queueNextWord();
+            });
+    }
+
+    async _playNextWord() {
+        this._nextBufferPromise.then(buffer => {
+            if (this.randomAmount === 0) {
+                this._playNextWordFile(buffer)
+            } else {
+                this._playGrainLoop(buffer, 0)
+            }
+            this._queueNextWord();
+        })
+    }
+
+    _playNextWordFile(buffer) {
+        if (!this._isPlaying) {
+            return;
         }
-        this._playGrainLoop(buffer, 0)
+
+        new Tone.Player(buffer.get()).toMaster()
+            .start();
+
+        context.setTimeout(() => {
+            this._playNextWord();
+        }, buffer.duration);
     }
 
     /**
@@ -78,8 +108,7 @@ export class Speaker {
      * @param {number} time - Location in buffer to start playing from
      */
     _playGrainLoop(buffer, time) {
-        // Note: circular function calls; call stack will keep growing until word is done playing
-        console.trace();
+        // Note: circular function calls; call stack will keep growing until word is done playing. 
         if (!this._isPlaying) {
             return;
         }
@@ -87,13 +116,10 @@ export class Speaker {
         let grainLength;
         let nextTime;
 
-
         // calculate the grain length
-        // range from 0.1--0.4
-        grainLength = 0.1 + Math.random() * 0.3;
-        // console.log('grainLength:', grainLength);
+        // range from MIN_GRAIN_LENGTH_S--MAX_GRAIN_LENGTH_S
+        grainLength = MIN_GRAIN_LENGTH_S + Math.random() * (MAX_GRAIN_LENGTH_S - MIN_GRAIN_LENGTH_S);
 
-        // TODO: scale repeat (don't always repeat at randomAmount==1)
         let rand = Math.random();
         // when randomAmount == 1, 50% chance of repeating grain
         // when randomAmount == 0, 0% chance of repeating grain
@@ -106,14 +132,6 @@ export class Speaker {
             nextTime = time + grainLength
         }
 
-        // play next word if the next time would be after the end of the buffer, or 
-        // this grain has played to the end of the buffer
-        if (nextTime > buffer.duration || time + grainLength >= buffer.duration) {
-            // console.log('end; on to next word');
-            // TODO: fetch next word before this word ends
-            this._playWord();
-            return;
-        }
 
         const ampEnv = new Tone.AmplitudeEnvelope({
             attack: 0.01,
@@ -126,10 +144,24 @@ export class Speaker {
             .connect(ampEnv)
             .start(undefined, time, grainLength + AMP_ENV_RELEASE_TIME);
 
+
+        let nextAction;
+        // play next word if the next time would be after the end of the buffer, or 
+        // this grain has played to the end of the buffer
+        if (nextTime > buffer.duration || time + grainLength >= buffer.duration) {
+            // console.log('end; on to next word');
+            nextAction = () => {
+                this._playNextWord();
+            };
+        } else {
+            // queue the next grain
+            nextAction = () => {
+                this._playGrainLoop(buffer, nextTime, grainLength);
+            }
+        }
+
+        context.setTimeout(nextAction, grainLength);
         ampEnv.triggerAttackRelease(grainLength);
 
-        context.setTimeout(() => {
-            this._playGrainLoop(buffer, nextTime, grainLength);
-        }, grainLength);
     }
 }

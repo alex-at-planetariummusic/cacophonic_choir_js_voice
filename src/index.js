@@ -3,7 +3,6 @@ import * as Tone from "tone";
 import { Speaker } from './speaker';
 
 const stopButton = document.getElementById('stop');
-const distanceInput = document.getElementById('distance');
 const randAmtInput = document.getElementById('randAmt');
 const crazyButton = document.getElementById('doCrazy');
 const listenerX = document.getElementById('listenerX');
@@ -23,22 +22,13 @@ function setListenerPosition() {
 listenerX.addEventListener('input', setListenerPosition);
 listenerY.addEventListener('input', setListenerPosition);
 
-
-let distance = 30;
-// just for debugging; can probably read distanceInput.value directly
-distanceInput.addEventListener('input', function(v) {
-    distance = distanceInput.value;
-    console.log('distance:', distanceInput.value);
-});
-
-
 let randAmt = 0.5;
 
 randAmtInput.addEventListener('input', function(v) {
     randAmt = randAmtInput.value;
-    console.log('randAmtInput:', randAmtInput.value);
+    // console.log('randAmtInput:', randAmtInput.value);
     if (speaker) {
-        speaker.randomAmount = randAmt
+        speaker.randomAmount = Number(randAmt);
     }
 });
 
@@ -50,28 +40,14 @@ stopButton.addEventListener('click', function() {
     }
 });
 
-crazyButton.addEventListener('click', playCrazy)
+crazyButton.addEventListener('click', play)
 
 let speaker;
 
-function playCrazy() {
-    console.log('playCrazy');
+function play() {
+    console.log('play');
     if (!speaker) {
-        speaker = new Speaker(getRandomAmount());
+        speaker = new Speaker(randAmt);
     }
     speaker.start();
-}
-
-
-
-// TODO: add error callback probably. 
-function loadBuffer(word, callback) {
-    const buffer = new Tone.Buffer(`./assets/sounds/${word}.mp3`, 
-        function() {
-            console.log(`Loaded "${word}"`);
-            callback(buffer);
-        },
-        function(e) {
-            console.error('could not load file', e);
-        });
 }
