@@ -1,12 +1,16 @@
 import * as Tone from "tone";
 
 import { Speaker } from './speaker';
+import { nextWord } from './wordpicker'
+
+window.nextWord = nextWord;
 
 const stopButton = document.getElementById('stop');
 const randAmtInput = document.getElementById('randAmt');
-const crazyButton = document.getElementById('doCrazy');
+const playButton = document.getElementById('play');
 const listenerX = document.getElementById('listenerX');
 const listenerY = document.getElementById('listenerY');
+const wordLevelInput = document.getElementById('wordLevel');
 
 function getRandomAmount() {
     return distance / 100;
@@ -40,14 +44,23 @@ stopButton.addEventListener('click', function() {
     }
 });
 
-crazyButton.addEventListener('click', play)
+playButton.addEventListener('click', play);
 
 let speaker;
 
 function play() {
     console.log('play');
     if (!speaker) {
-        speaker = new Speaker(randAmt);
+        const nextWordCallback = function() {
+            const wordLevel = wordLevelInput.value;
+            const word = nextWord(1, wordLevel);
+
+            console.log('next word: ' + word + '; level: ' + wordLevel);
+
+            return word;
+
+        }
+        speaker = new Speaker(randAmt, nextWordCallback);
     }
     speaker.start();
 }

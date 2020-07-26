@@ -13,8 +13,12 @@ export class Speaker {
      * TODO pass in callback for _getNextWord
      * @param {number} randomAmount - in range of [0, 1]
      */
-    constructor(randomAmount) {
+    constructor(randomAmount, getWordCallback) {
         this.randomAmount = isNaN(randomAmount) ? 0.5 : randomAmount;
+
+        if (getWordCallback) {
+            this._getWord = getWordCallback;
+        }
 
         this._panner3d = new Tone.Panner3D().toMaster();
 
@@ -33,10 +37,10 @@ export class Speaker {
     /**
      * Start the speaker speakeing
      */
-    start() {
+    async start() {
         this._isPlaying = true;
         if (!this._nextBufferPromise) {
-            this._queueNextWord();
+            await this._queueNextWord();
         }
         this._playNextWord();
     }
@@ -48,8 +52,13 @@ export class Speaker {
 
 
     _getNextWord() {
-        const word =  this._words[this._nextWordIndex];
-        this._nextWordIndex = (this._nextWordIndex + 1) % this._words.length;
+        let word
+        if (this._getWord) {
+            word = this._getWord();
+        } else { // mock
+            word =  this._words[this._nextWordIndex];
+            this._nextWordIndex = (this._nextWordIndex + 1) % this._words.length;
+        }
         console.log('NEXT WORD:', word);
         return word;
     }
@@ -77,11 +86,13 @@ export class Speaker {
             .catch(e => {
                 this._queueNextWord();
             });
+        return this._nextBufferPromise;
     }
 
     async _playNextWord() {
         this._nextBufferPromise.then(buffer => {
             if (this.randomAmount === 0) {
+                console.log('pnw');
                 this._playNextWordFile(buffer)
             } else {
                 this._playGrainLoop(buffer, 0)
