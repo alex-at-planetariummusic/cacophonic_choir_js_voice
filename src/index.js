@@ -48,8 +48,9 @@ playButton.addEventListener('click', play);
 
 let speaker;
 
-function play() {
+async function play() {
     console.log('play');
+    await Tone.start();
     if (!speaker) {
         const nextWordCallback = function() {
             const wordLevel = wordLevelInput.value;

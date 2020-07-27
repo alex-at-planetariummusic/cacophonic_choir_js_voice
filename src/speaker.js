@@ -38,6 +38,10 @@ export class Speaker {
      * Start the speaker speakeing
      */
     async start() {
+        if (context.state === 'suspended') {
+            console.log('context suspended. wth?')
+            context.resume();
+        }
         this._isPlaying = true;
         if (!this._nextBufferPromise) {
             await this._queueNextWord();
@@ -46,7 +50,6 @@ export class Speaker {
     }
 
     stop() {
-        // console.log('stop()');
         this._isPlaying = false;
     }
 
@@ -95,6 +98,7 @@ export class Speaker {
                 console.log('pnw');
                 this._playNextWordFile(buffer)
             } else {
+                console.log('pgl');
                 this._playGrainLoop(buffer, 0)
             }
             this._queueNextWord();
@@ -136,10 +140,8 @@ export class Speaker {
         // when randomAmount == 0, 0% chance of repeating grain
         if (rand * 2 < this.randomAmount) {
             //repeat
-            console.log('repeat', rand, this.randomAmount);
             nextTime = time;
         } else {
-            // console.log('norepeat');
             nextTime = time + grainLength
         }
 
@@ -155,24 +157,25 @@ export class Speaker {
             .connect(ampEnv)
             .start(undefined, time, grainLength + AMP_ENV_RELEASE_TIME);
 
-
         let nextAction;
         // play next word if the next time would be after the end of the buffer, or 
         // this grain has played to the end of the buffer
         if (nextTime > buffer.duration || time + grainLength >= buffer.duration) {
-            // console.log('end; on to next word');
+            console.log('end; on to next word');
             nextAction = () => {
                 this._playNextWord();
             };
         } else {
             // queue the next grain
             nextAction = () => {
-                this._playGrainLoop(buffer, nextTime, grainLength);
+                this._playGrainLoop(buffer, nextTime);
             }
         }
 
+        // schedule next playback event
         context.setTimeout(nextAction, grainLength);
-        ampEnv.triggerAttackRelease(grainLength);
 
+        // play the grain
+        ampEnv.triggerAttackRelease(grainLength);
     }
 }
