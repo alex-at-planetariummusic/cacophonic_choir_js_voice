@@ -7,6 +7,9 @@ const AMP_ENV_RELEASE_TIME = 0.1;
 const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 
+// additional space to add between words. Negative makes them closer together
+const WORD_SPACE_OFFSET_S = -0.1;
+
 export class Speaker {
     /**
      * TODO add location
@@ -38,6 +41,7 @@ export class Speaker {
      * Start the speaker speakeing
      */
     async start() {
+        console.time('globaltimer');
         if (context.state === 'suspended') {
             console.log('context suspended. wth?')
             context.resume();
@@ -93,7 +97,10 @@ export class Speaker {
     }
 
     async _playNextWord() {
+        console.timeEnd('pnw');
+        console.time('bp');
         this._nextBufferPromise.then(buffer => {
+            console.timeEnd('bp');
             if (this.randomAmount === 0) {
                 console.log('pnw');
                 this._playNextWordFile(buffer)
@@ -110,12 +117,17 @@ export class Speaker {
             return;
         }
 
+        console.log('_playNextWordFile STARTED; buffer length:', buffer.duration);
+        console.timeLog('globaltimer');
+
         new Tone.Player(buffer.get()).toMaster()
             .start();
 
         context.setTimeout(() => {
+            console.log('_playNextWordFile ENDED');
+            console.timeLog('globaltimer');
             this._playNextWord();
-        }, buffer.duration);
+        }, buffer.duration + WORD_SPACE_OFFSET_S);
     }
 
     /**
@@ -163,17 +175,17 @@ export class Speaker {
         if (nextTime > buffer.duration || time + grainLength >= buffer.duration) {
             console.log('end; on to next word');
             nextAction = () => {
+                console.time('pnw');
+                console.timeLog('globaltimer');
                 this._playNextWord();
             };
+            context.setTimeout(nextAction, grainLength + WORD_SPACE_OFFSET_S);
         } else {
             // queue the next grain
-            nextAction = () => {
+            context.setTimeout(() => {
                 this._playGrainLoop(buffer, nextTime);
-            }
+            }, grainLength);
         }
-
-        // schedule next playback event
-        context.setTimeout(nextAction, grainLength);
 
         // play the grain
         ampEnv.triggerAttackRelease(grainLength);
