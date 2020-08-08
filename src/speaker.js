@@ -7,6 +7,21 @@ const AMP_ENV_RELEASE_TIME = 0.1;
 const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 
+// const LEVEL_DISTANCE_THRESHOLDS = {
+//     L0: 50,
+//     L1: 100,
+//     L2: 150,
+//     L3: 200,
+//     L4: 300
+// }
+
+const DISTANCE_ORIGINAL_THRESHOLD = 50;
+// Past this distance, don't play anything
+const DISTANCE_SILENCE_THRESHOLD = 300;
+// Past this distance, word choice is random (=== MAX_WORD_LEVEL)
+const DISTANCE_RANDOM_THRESHOLD = 200;
+const MAX_WORD_LEVEL = 6;
+
 // additional space to add between words. Negative makes them closer together
 const WORD_SPACE_OFFSET_S = -0.1;
 
@@ -18,6 +33,8 @@ export class Speaker {
      */
     constructor(randomAmount, getWordCallback) {
         this.randomAmount = isNaN(randomAmount) ? 0.5 : randomAmount;
+
+        this.wordLevel = 0;
 
         if (getWordCallback) {
             this._getWord = getWordCallback;
@@ -40,33 +57,64 @@ export class Speaker {
     /**
      * Start the speaker speakeing
      */
-    async start() {
-        console.time('globaltimer');
-        if (context.state === 'suspended') {
-            console.log('context suspended. wth?')
-            context.resume();
-        }
-        this._isPlaying = true;
-        if (!this._nextBufferPromise) {
-            await this._queueNextWord();
-        }
-        this._playNextWord();
+    start() {
+        this._startPlayingIfNotPlaying();
     }
 
     stop() {
         this._isPlaying = false;
     }
 
+    setDistance(distance) {
+        console.log('setting distance to:', distance);
+        if (distance > DISTANCE_SILENCE_THRESHOLD) {
+            this._isPlaying = false;
+            return;
+        } 
+        if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
+            this.wordLevel = 0;
+            this.randomAmount = 0;
+        } else {
+            // scale to 0..1
+            this.randomAmount = (distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_SILENCE_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD);
+            // scale 1..maxLevel
+            this.wordLevel = Math.min(MAX_WORD_LEVEL, Math.floor(
+(MAX_WORD_LEVEL - 1) * ((distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
+
+            ));
+        }
+
+        console.log('setDistance; wordLevel: ' + this.wordLevel + ' randomAmount: ' + this.randomAmount);
+
+        this._startPlayingIfNotPlaying();
+    }
+
+
+    _startPlayingIfNotPlaying() {
+        if (this._isPlaying) {
+            return;
+        }
+
+        this._isPlaying = true;
+        if (context.state === 'suspended') {
+            console.log('context suspended. wth?')
+            context.resume();
+        }
+        if (!this._nextBufferPromise) {
+            this._queueNextWord();
+        }
+        this._playNextWord();
+    }
+
 
     _getNextWord() {
         let word
         if (this._getWord) {
-            word = this._getWord();
+            word = this._getWord(this.wordLevel);
         } else { // mock
             word =  this._words[this._nextWordIndex];
             this._nextWordIndex = (this._nextWordIndex + 1) % this._words.length;
         }
-        console.log('NEXT WORD:', word);
         return word;
     }
 
@@ -75,7 +123,6 @@ export class Speaker {
         return new Promise((resolve, reject) => {
             const buffer = new Tone.Buffer(`./assets/sounds/${word}.mp3`,
                 function () {
-                    console.log(`Loaded "${word}"`);
                     resolve(buffer);
                 },
                 function (e) {
@@ -97,15 +144,10 @@ export class Speaker {
     }
 
     async _playNextWord() {
-        console.timeEnd('pnw');
-        console.time('bp');
         this._nextBufferPromise.then(buffer => {
-            console.timeEnd('bp');
             if (this.randomAmount === 0) {
-                console.log('pnw');
                 this._playNextWordFile(buffer)
             } else {
-                console.log('pgl');
                 this._playGrainLoop(buffer, 0)
             }
             this._queueNextWord();
@@ -117,15 +159,10 @@ export class Speaker {
             return;
         }
 
-        console.log('_playNextWordFile STARTED; buffer length:', buffer.duration);
-        console.timeLog('globaltimer');
-
-        new Tone.Player(buffer.get()).toMaster()
+        new Tone.Player(buffer.get()).connect(this._panner3d)
             .start();
 
         context.setTimeout(() => {
-            console.log('_playNextWordFile ENDED');
-            console.timeLog('globaltimer');
             this._playNextWord();
         }, buffer.duration + WORD_SPACE_OFFSET_S);
     }
@@ -173,10 +210,7 @@ export class Speaker {
         // play next word if the next time would be after the end of the buffer, or 
         // this grain has played to the end of the buffer
         if (nextTime > buffer.duration || time + grainLength >= buffer.duration) {
-            console.log('end; on to next word');
             nextAction = () => {
-                console.time('pnw');
-                console.timeLog('globaltimer');
                 this._playNextWord();
             };
             context.setTimeout(nextAction, grainLength + WORD_SPACE_OFFSET_S);

@@ -76,8 +76,6 @@ function iterate_story_word(id){
  * @param {number} distance - Integer from 0 to 7
  */
 function nextWord(id, distance){
-    // var distance = sensors[id];
-    //console.log( "distance value " + sensors[id]);
     let potential_word = '';
     if (distance >= maxDistance) {
         while (missing_words.includes(potential_word)) {

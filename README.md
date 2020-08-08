@@ -9,6 +9,10 @@ $ npm run start
 
 # TODO
 
-- Attach to word engine
+- Turn off `Speaker` when distance is far
+- Multi-agent test (test bandwidth)
+- Scale distance (maybe to 5x5 grid?)
 - Smooth out speaker location changes `Speaker`
+
+# TODO 2nd round
 - Stutter backwards
