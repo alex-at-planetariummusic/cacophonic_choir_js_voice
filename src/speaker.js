@@ -27,7 +27,9 @@ export class Speaker {
             this._getWord = getWordCallback;
         }
 
-        this._panner3d = new Tone.Panner3D(positionX, positionY, 0).toMaster();
+        this._panner3D = new Tone.Panner3D(positionX, positionY, 0).toMaster();
+        // this._panner3d.rolloffFactor = 300;
+        this._panner3D.rolloffFactor = 0.02;
 
         // temporary stuff
         this._words = [
@@ -53,11 +55,23 @@ export class Speaker {
     }
 
     setDistance(distance) {
-        console.log('setting distance to:', distance);
+        // console.log('setting distance to:', distance);
         if (distance > DISTANCE_SILENCE_THRESHOLD) {
             this._isPlaying = false;
+            if (this._listenInterval === undefined) {
+                // set time to check user's position periodically in order to restart playing
+                console.log('setting the interval');
+                this._listenInterval = setInterval(() => {
+                    this.setDistance(this._getDistance());
+                }, 100);
+            }
             return;
         } 
+        if (this._listenInterval !== undefined) {
+            console.log('Clearing interval!', this._listenInterval);
+            clearInterval(this._listenInterval);
+            this._listenInterval = undefined;
+        }
         if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
             this.wordLevel = 0;
             this.randomAmount = 0;
@@ -71,11 +85,22 @@ export class Speaker {
             ));
         }
 
-        console.log('setDistance; wordLevel: ' + this.wordLevel + ' randomAmount: ' + this.randomAmount);
+        // console.log('setDistance; wordLevel: ' + this.wordLevel + ' randomAmount: ' + this.randomAmount);
 
         this._startPlayingIfNotPlaying();
     }
 
+    /**
+     * Gets the speaker's distance from the listener's position
+     */
+    _getDistance() {
+        return Math.abs(
+            Math.sqrt(
+                Math.pow(Tone.Listener.positionX - this._panner3D.positionX, 2) + 
+                Math.pow(Tone.Listener.positionY - this._panner3D.positionY, 2)
+            )
+        );
+    }
 
     _startPlayingIfNotPlaying() {
         if (this._isPlaying) {
@@ -132,6 +157,7 @@ export class Speaker {
 
     async _playNextWord() {
         this._nextBufferPromise.then(buffer => {
+            this.setDistance(this._getDistance());
             if (this.randomAmount === 0) {
                 this._playNextWordFile(buffer)
             } else {
@@ -146,7 +172,7 @@ export class Speaker {
             return;
         }
 
-        new Tone.Player(buffer.get()).connect(this._panner3d)
+        new Tone.Player(buffer.get()).connect(this._panner3D)
             .start();
 
         context.setTimeout(() => {
@@ -187,7 +213,7 @@ export class Speaker {
             decay: 0,
             sustain: 1.0,
             release: AMP_ENV_RELEASE_TIME
-        }).connect(this._panner3d);
+        }).connect(this._panner3D);
 
         new Tone.Player(buffer.get())
             .connect(ampEnv)
@@ -204,6 +230,7 @@ export class Speaker {
         } else {
             // queue the next grain
             context.setTimeout(() => {
+                this.setDistance(this._getDistance());
                 this._playGrainLoop(buffer, nextTime);
             }, grainLength);
         }

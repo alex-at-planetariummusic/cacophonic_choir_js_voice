@@ -12,7 +12,6 @@ const model_name_array = [
 // TODO: Clean up data so we don't need this array
 const missing_words = ['href="http://whenyoureready.org/wp-content/uploads/unnamed.png"><img.wav','**','uploads','','transgender/nonbinary','"http://whenyoureready.org/wp-content/uploads/img_5743.jpg"><img.wav','"',':','wp-image-1973"','1973','org','whenyoureready','http','wp','size-medium','wp-image-1260"',".",",", "'", "’","","$", "£250", "🙁", "-", "!", "_", "__", "___", "?", "...", "………", "]", "[", "@", "%", "+", "=", '</em>', '<a', '<em>all', 'story</a>', 'details):</em>', '/', '>', 'href="http://whenyoureready.org/myrape1/">my', 'class="alignright','alt=""', 'src="http://whenyoureready.org/wp-content/uploads/28782867_2211851415508248_4292455536774270930_n-300x300.jpg"/></a>','href="http://whenyoureready.org/wp-content/uploads/28782867_2211851415508248_4292455536774270930_n.jpg"><img', 'wp-image-2598"'];
 
-var numSpeakers = 9;
 var maxDistance = 6;
 var speakers = [];
 var numSpeakers = 9;
@@ -20,7 +19,7 @@ let stories;
 
 function initialize() {
     // dbloaded();
-    fetch(DATA_JSON_URL)
+    return fetch(DATA_JSON_URL)
     .then(response => {
         return response.json();
     })
@@ -33,12 +32,12 @@ function initialize() {
 function dbloaded() {
     // create speakers
     for (var i = 0; i < numSpeakers; i++) {
-        speakers.push(speaker_init(i));
+        speakers.push(speaker_init());
     }
 }
 
 
-function speaker_init(id) {
+function speaker_init() {
     var keys = Object.keys(stories);
     var speaker = new Object();
     speaker.current_story = stories[keys[ keys.length * Math.random() << 0]];
@@ -65,7 +64,7 @@ function iterate_story_word(id){
     if (speakers[id].story_word_id + 1 < speakers[id].story_text[0].length) {
         speakers[id].story_word_id++;
     } else {
-        speakers[id] = speaker_init(i);
+        speakers[id] = speaker_init();
     }
     // IF WE WANT EACH AGENT TO CONTINUALLY TELL THE SAME STORY INSTEAD
     //speakers[id].story_word_id = (speakers[id].story_word_id + 1) % speakers[id].story_text[0].length;
@@ -92,8 +91,9 @@ function nextWord(id, distance){
     return potential_word
 }
 
-initialize();
+// initialize();
 
 export {
-    nextWord
+    nextWord,
+    initialize
 };
