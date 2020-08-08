@@ -51,6 +51,8 @@ export class Speaker {
     }
 
     stop() {
+        console.log('speaker stop');
+        this._clearIntervalIfItExists();
         this._isPlaying = false;
     }
 
@@ -67,11 +69,8 @@ export class Speaker {
             }
             return;
         } 
-        if (this._listenInterval !== undefined) {
-            console.log('Clearing interval!', this._listenInterval);
-            clearInterval(this._listenInterval);
-            this._listenInterval = undefined;
-        }
+
+        this._clearIntervalIfItExists();
         if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
             this.wordLevel = 0;
             this.randomAmount = 0;
@@ -88,6 +87,14 @@ export class Speaker {
         // console.log('setDistance; wordLevel: ' + this.wordLevel + ' randomAmount: ' + this.randomAmount);
 
         this._startPlayingIfNotPlaying();
+    }
+
+    _clearIntervalIfItExists() {
+        if (this._listenInterval !== undefined) {
+            console.log('Clearing interval!', this._listenInterval);
+            clearInterval(this._listenInterval);
+            this._listenInterval = undefined;
+        }
     }
 
     /**
@@ -157,6 +164,10 @@ export class Speaker {
 
     async _playNextWord() {
         this._nextBufferPromise.then(buffer => {
+            if (!this._isPlaying) {
+                return;
+            }
+
             this.setDistance(this._getDistance());
             if (this.randomAmount === 0) {
                 this._playNextWordFile(buffer)
@@ -230,8 +241,10 @@ export class Speaker {
         } else {
             // queue the next grain
             context.setTimeout(() => {
-                this.setDistance(this._getDistance());
-                this._playGrainLoop(buffer, nextTime);
+                if (this._isPlaying) {
+                    this.setDistance(this._getDistance());
+                    this._playGrainLoop(buffer, nextTime);
+                }
             }, grainLength);
         }
 
