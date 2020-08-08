@@ -8,24 +8,36 @@ window.nextWord = nextWord;
 const stopButton = document.getElementById('stop');
 const randAmtInput = document.getElementById('randAmt');
 const distanceInput = document.getElementById('distance');
+const wordLevelInput = document.getElementById('wordLevel');
 const playButton = document.getElementById('play');
 const listenerX = document.getElementById('listenerX');
 const listenerY = document.getElementById('listenerY');
-const wordLevelInput = document.getElementById('wordLevel');
+const listenerOrientation = document.getElementById('listenerOrientation');
 
-function getRandomAmount() {
-    return distance / 100;
-}
+
+// Initialize the listener
+Tone.Listener.setPosition(300, 300, 0);
 
 function setListenerPosition() {
     console.log('setting listener position', listenerX.value, listenerY.value);
     // not sure if casting to Number is necessary
     // Tone.Listener.positionX.targetRampTo(Number(listenerX.value), 10);
-    Tone.Listener.setPosition(Number(listenerX.value/1), Number(listenerY.value * 10), 0.1);
-    console.log(Tone.Listener.positionX);
+    Tone.Listener.setPosition(Number(listenerX.value), Number(listenerY.value), 0.1);
 }
 listenerX.addEventListener('input', setListenerPosition);
 listenerY.addEventListener('input', setListenerPosition);
+listenerOrientation.addEventListener('input', function() {
+    const radians = listenerOrientation.value;
+    Tone.Listener.setOrientation(
+        Math.cos(radians),
+        Math.sin(radians),
+        0,
+        0,
+        0,
+        1
+    );
+
+})
 
 let randAmt = 0.5;
 
@@ -68,12 +80,11 @@ async function play() {
     await Tone.start();
     if (!speaker) {
         const nextWordCallback = function(level) {
-            const wordLevel = wordLevelInput.value;
             const word = nextWord(1, level);
             console.log('next word: ' + word + '; level: ' + level);
             return word;
         }
-        speaker = new Speaker(randAmt, nextWordCallback);
+        speaker = new Speaker(nextWordCallback, 300, 300);
     }
     speaker.start();
 }

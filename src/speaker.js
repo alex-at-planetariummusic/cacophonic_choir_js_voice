@@ -7,14 +7,6 @@ const AMP_ENV_RELEASE_TIME = 0.1;
 const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 
-// const LEVEL_DISTANCE_THRESHOLDS = {
-//     L0: 50,
-//     L1: 100,
-//     L2: 150,
-//     L3: 200,
-//     L4: 300
-// }
-
 const DISTANCE_ORIGINAL_THRESHOLD = 50;
 // Past this distance, don't play anything
 const DISTANCE_SILENCE_THRESHOLD = 300;
@@ -26,21 +18,16 @@ const MAX_WORD_LEVEL = 6;
 const WORD_SPACE_OFFSET_S = -0.1;
 
 export class Speaker {
-    /**
-     * TODO add location
-     * TODO pass in callback for _getNextWord
-     * @param {number} randomAmount - in range of [0, 1]
-     */
-    constructor(randomAmount, getWordCallback) {
-        this.randomAmount = isNaN(randomAmount) ? 0.5 : randomAmount;
+    constructor(getWordCallback, positionX, positionY) {
 
+        this.randomAmount = 0;
         this.wordLevel = 0;
 
         if (getWordCallback) {
             this._getWord = getWordCallback;
         }
 
-        this._panner3d = new Tone.Panner3D().toMaster();
+        this._panner3d = new Tone.Panner3D(positionX, positionY, 0).toMaster();
 
         // temporary stuff
         this._words = [
