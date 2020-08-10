@@ -18,15 +18,14 @@ var numSpeakers = 9;
 let stories;
 
 function initialize() {
-    // dbloaded();
     return fetch(DATA_JSON_URL)
-    .then(response => {
-        return response.json();
-    })
-    .then(json => {
-        stories = JSON.parse(json);
-        dbloaded();
-    });
+        .then(response => {
+            return response.json();
+        })
+        .then(json => {
+            stories = json;
+            dbloaded();
+        });
 }
 
 function dbloaded() {
