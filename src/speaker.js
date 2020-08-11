@@ -7,11 +7,13 @@ const AMP_ENV_RELEASE_TIME = 0.1;
 const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 
-const DISTANCE_ORIGINAL_THRESHOLD = 50;
+// Play the original if less than this distance from the agent
+const DISTANCE_ORIGINAL_THRESHOLD = 5;
 // Past this distance, don't play anything
-const DISTANCE_SILENCE_THRESHOLD = 300;
+// 81 should make it so that there are always at least three agents playing
+const DISTANCE_SILENCE_THRESHOLD = 81;
 // Past this distance, word choice is random (=== MAX_WORD_LEVEL)
-const DISTANCE_RANDOM_THRESHOLD = 200;
+const DISTANCE_RANDOM_THRESHOLD = 30;
 const MAX_WORD_LEVEL = 6;
 
 // additional space to add between words. Negative makes them closer together
@@ -19,28 +21,14 @@ const WORD_SPACE_OFFSET_S = -0.1;
 
 export class Speaker {
     constructor(getWordCallback, positionX, positionY) {
-
-        this.randomAmount = 0;
-        this.wordLevel = 0;
-
-        if (getWordCallback) {
-            this._getWord = getWordCallback;
-        }
-
+        this._getWord = getWordCallback;
         this._panner3D = new Tone.Panner3D(positionX, positionY, 0).toMaster();
         // this._panner3d.rolloffFactor = 300;
-        this._panner3D.rolloffFactor = 0.02;
 
-        // temporary stuff
-        this._words = [
-            'four',
-            'fostering',
-            'fountains',
-            'in',
-            'fast',
-            'collaboration',
-        ]
-        this._nextWordIndex = 0;
+        // this._panner3D.rolloffFactor = 0.02;
+        this._panner3D.rolloffFactor = 0.8;
+        this.randomAmount = 0;
+        this.wordLevel = 0;
     }
 
     /**
@@ -127,14 +115,7 @@ export class Speaker {
 
 
     _getNextWord() {
-        let word
-        if (this._getWord) {
-            word = this._getWord(this.wordLevel);
-        } else { // mock
-            word =  this._words[this._nextWordIndex];
-            this._nextWordIndex = (this._nextWordIndex + 1) % this._words.length;
-        }
-        return word;
+        return this._getWord(this.wordLevel);
     }
 
 
@@ -181,6 +162,12 @@ export class Speaker {
     _playNextWordFile(buffer) {
         if (!this._isPlaying) {
             return;
+        }
+
+        if (!buffer) {
+            console.error('no buffer :(');
+            debugger;
+            this._playNextWord();
         }
 
         new Tone.Player(buffer.get()).connect(this._panner3D)

@@ -16,7 +16,7 @@ const listenerOrientation = document.getElementById('listenerOrientation');
 
 
 // Initialize the listener
-Tone.Listener.setPosition(300, 300, 0);
+Tone.Listener.setPosition(0, 0, 0);
 
 function setListenerPosition() {
     // console.log('setting listener position', listenerX.value, listenerY.value);
@@ -28,7 +28,7 @@ listenerX.addEventListener('input', setListenerPosition);
 listenerY.addEventListener('input', setListenerPosition);
 
 listenerOrientation.addEventListener('input', function() {
-    const radians = listenerOrientation.value;
+    const radians = 2 * Math.PI * (listenerOrientation.value / 360);
     Tone.Listener.setOrientation(
         // Tone.Listener.positionX + Math.cos(radians), // TODO: maybe this is the way to set t?
         // Tone.Listener.positionY + Math.sin(radians),
@@ -84,11 +84,13 @@ const speakers = [];
 
 async function initializeSpeakers() {
     await initialize();
-    const distance_between_agents = 300;
+    const margin = 30;
+    const distance_between_agents = 40;
+    // assumption: center is 0,0
 
     let speakerId = 0;
-    for(let x = 0; x <= 2 * distance_between_agents; x = x + distance_between_agents) {
-        for(let y = 0; y <= 2 * distance_between_agents; y = y + distance_between_agents) {
+    for(let x = -distance_between_agents; x <= distance_between_agents; x = x + distance_between_agents) {
+        for(let y = -distance_between_agents; y <= distance_between_agents; y = y + distance_between_agents) {
             const id = speakerId++;
 
             const nextWordCallback = function(level) {
@@ -96,6 +98,7 @@ async function initializeSpeakers() {
                 // console.log('next word: ' + word + '; level: ' + level);
                 return word;
             }
+            console.log('coords: ', x, y);
             speakers.push(new Speaker(nextWordCallback, x, y));
         }
     }
@@ -103,3 +106,15 @@ async function initializeSpeakers() {
 }
 
 initializeSpeakers();
+
+window.stats = function() {
+    console.log('Listener: ', Tone.Listener.positionX, Tone.Listener.positionY);
+    console.log('active speakers: ' + speakers.filter(s => {
+        if ( s._isPlaying) {
+            console.log('playing:', s);
+            return true;
+        } else {
+            return false;
+        }
+    }).length);
+}
