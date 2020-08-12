@@ -1,7 +1,7 @@
 import * as Tone from "tone";
 
 import { Speaker } from './speaker';
-import { nextWord, initialize } from './wordpicker'
+import { nextWord, initialize } from './wordpicker';
 
 window.nextWord = nextWord;
 
@@ -75,7 +75,7 @@ playButton.addEventListener('click', play);
 let speaker;
 
 async function play() {
-    console.log('play');
+    console.log('PLAY!!!');
     await Tone.start();
     speakers.forEach(s => s.start());
 }
@@ -84,7 +84,6 @@ const speakers = [];
 
 async function initializeSpeakers() {
     await initialize();
-    const margin = 30;
     const distance_between_agents = 40;
     // assumption: center is 0,0
 
@@ -95,14 +94,12 @@ async function initializeSpeakers() {
 
             const nextWordCallback = function(level) {
                 const word = nextWord(id, level);
-                // console.log('next word: ' + word + '; level: ' + level);
                 return word;
             }
             console.log('coords: ', x, y);
             speakers.push(new Speaker(nextWordCallback, x, y));
         }
     }
-
 }
 
 initializeSpeakers();

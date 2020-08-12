@@ -11,17 +11,20 @@ module.exports = {
     },
 
     entry: {
-        app: './src/index.js'
+        app: './src/index.js',
+        'cc-unity': './src/cc-unity.js'
     },
 
     output: {
-        filename: 'bundle.js',
+        // filename: 'bundle.js',
+        filename: '[name].js',
         path: path.resolve(__dirname, 'dist')
     },
 
     plugins: [
         new HtmlWebpackPlugin({
-            template: './src/index.ejs'
+            template: './src/index.ejs',
+            chunks: ['app']
         })
     ],
 
