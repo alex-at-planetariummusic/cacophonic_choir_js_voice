@@ -4,32 +4,54 @@ import { Speaker } from './speaker';
 import { nextWord, initialize } from './wordpicker';
 
 const speakers = [];
+const AGENT_HEIGHT = 7.5;
 
 // for debugging;
 window.Tone = Tone;
 
+let playing = false;
+
 
 window.setListenerPosition = function(x, y, orientationDegrees) {
     // console.log('POSITION:', x, y, orientationDegrees);
+    // if (previousOrientation === orientationDegrees) {
+    //     return;
+    // }
+    // previousOrientation = orientationDegrees;
+    // console.log('new orientation:', orientationDegrees);
 
-    Tone.Listener.setPosition(x, y, 0.1);
+    // Tone.Listener.setPosition(x, y, 0.1);
+    Tone.Listener.setPosition(x, AGENT_HEIGHT, y);
 
     const radians = 2 * Math.PI * (orientationDegrees / 360);
+    const xOrientation = -Math.sin(radians);
+    const zOrientation = -Math.cos(radians);
+    // console.log('orientation (x,z):', xOrientation, zOrientation)
     Tone.Listener.setOrientation(
-        Math.cos(radians),
-        Math.sin(radians),
+        xOrientation,
         0,
+        zOrientation,
         0,
-        0,
-        1
+        1,
+        0
     );
 }
 
 async function play() {
-    console.log('play!!!');
-    await Tone.start();
-    console.log('Tone started!!!');
-    speakers.forEach(s => s.start());
+    if (!playing) {
+        console.log('play!!!');
+        playing = true;
+        toggleAudioButton.textContent = "Pause audio";
+        await Tone.start();
+        speakers.forEach(s => s.start());
+    }
+}
+
+function stop() {
+    playing = false;
+
+    toggleAudioButton.textContent = "Start audio";
+    speakers.forEach(s => s.stop());
 }
 
 // for debugging
@@ -41,6 +63,13 @@ async function initializeSpeakers() {
     // assumption: center is 0,0
 
     let speakerId = 0;
+
+    // test with only the center speaker
+    // speakers.push(new Speaker(function(level) {
+    //     return nextWord(speakerId, level);
+    // }, distance_between_agents, distance_between_agents));
+    // return;
+
     for(let x = -distance_between_agents; x <= distance_between_agents; x = x + distance_between_agents) {
         for(let y = -distance_between_agents; y <= distance_between_agents; y = y + distance_between_agents) {
             const id = speakerId++;
@@ -53,16 +82,26 @@ async function initializeSpeakers() {
             speakers.push(new Speaker(nextWordCallback, x, y));
         }
     }
-    play();
 }
 initializeSpeakers();
 
-// Add <button id="play">play</button>
+let toggleAudioButton;
+
 document.addEventListener("DOMContentLoaded", function(){
-    document.getElementById('play').addEventListener('click', play);
+    // attach to <button id="play">play</button>
+    // document.getElementById('play').addEventListener('click', play);
+    // attach to  <button id="stop">stop</button>
+    // document.getElementById('stop').addEventListener('click', stop);
+
+    // attach to  <button id="stop">stop</button>
+    toggleAudioButton = document.getElementById('toggleAudio');
+    toggleAudioButton.addEventListener('click', function() {
+        playing ? stop() : play();
+    });
 });
 
 window.stats = function() {
-    console.log('Listener position: ', Tone.Listener.positionX, Tone.Listener.positionY);
+    console.log('Listener position: ', Tone.Listener.positionX, Tone.Listener.positionY, Tone.Listener.positionZ);
     console.log('active speakers: ' + speakers.filter(s => s._isPlaying).length);
+    console.log('speaker:', speakers[0]);
 }

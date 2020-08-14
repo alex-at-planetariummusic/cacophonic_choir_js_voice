@@ -8,25 +8,25 @@ const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 
 // Play the original if less than this distance from the agent
-const DISTANCE_ORIGINAL_THRESHOLD = 5;
+const DISTANCE_ORIGINAL_THRESHOLD = 9; // currently the closes you can get to the agent is about 6.5
 // Past this distance, don't play anything
 // 81 should make it so that there are always at least three agents playing
 const DISTANCE_SILENCE_THRESHOLD = 81;
 // Past this distance, word choice is random (=== MAX_WORD_LEVEL)
-const DISTANCE_RANDOM_THRESHOLD = 30;
+const DISTANCE_RANDOM_THRESHOLD = 21;
 const MAX_WORD_LEVEL = 6;
 
 // additional space to add between words. Negative makes them closer together
-const WORD_SPACE_OFFSET_S = -0.1;
+const WORD_SPACE_OFFSET_S = -0.13;
 
 export class Speaker {
-    constructor(getWordCallback, positionX, positionY) {
+    constructor(getWordCallback, positionX, positionZ) {
         this._getWord = getWordCallback;
-        this._panner3D = new Tone.Panner3D(positionX, positionY, 0).toMaster();
-        // this._panner3d.rolloffFactor = 300;
+        this._panner3D = new Tone.Panner3D(positionX, 1, positionZ).toMaster();
 
-        // this._panner3D.rolloffFactor = 0.02;
-        this._panner3D.rolloffFactor = 0.8;
+        // larger numbers make for more drastic changes
+        this._panner3D.rolloffFactor = 10;
+        // this._panner3D.rolloffFactor = 0.8;
         this.randomAmount = 0;
         this.wordLevel = 0;
     }
@@ -68,7 +68,6 @@ export class Speaker {
             // scale 1..maxLevel
             this.wordLevel = Math.min(MAX_WORD_LEVEL, Math.floor(
 (MAX_WORD_LEVEL - 1) * ((distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
-
             ));
         }
 
@@ -92,7 +91,8 @@ export class Speaker {
         return Math.abs(
             Math.sqrt(
                 Math.pow(Tone.Listener.positionX - this._panner3D.positionX, 2) + 
-                Math.pow(Tone.Listener.positionY - this._panner3D.positionY, 2)
+                // Math.pow(Tone.Listener.positionY - this._panner3D.positionY, 2)
+                Math.pow(Tone.Listener.positionZ - this._panner3D.positionZ, 2)
             )
         );
     }
