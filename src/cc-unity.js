@@ -57,15 +57,12 @@ async function initializeSpeakers() {
 }
 initializeSpeakers();
 
+// Add <button id="play">play</button>
+document.addEventListener("DOMContentLoaded", function(){
+    document.getElementById('play').addEventListener('click', play);
+});
+
 window.stats = function() {
     console.log('Listener position: ', Tone.Listener.positionX, Tone.Listener.positionY);
     console.log('active speakers: ' + speakers.filter(s => s._isPlaying).length);
 }
-
-// mergeInto(LibraryManager.library, {
-//     writeCoordinates: function (xPos, yPos, rot) {
-//         console.log(xPos, yPos, rot);
-//         setListenerPosition(xPos, yPos, rot);
-//         //return "X: " + xPos + "Y: " + yPos;
-//     },
-// });
