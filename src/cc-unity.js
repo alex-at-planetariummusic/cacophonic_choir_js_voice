@@ -57,6 +57,9 @@ function stop() {
 // for debugging
 window.play = play;
 
+// Set to true to test with only one speaker
+const DEBUG_ONE = false;
+
 async function initializeSpeakers() {
     await initialize();
     const distance_between_agents = 40;
@@ -64,22 +67,25 @@ async function initializeSpeakers() {
 
     let speakerId = 0;
 
-    // test with only the center speaker
-    // speakers.push(new Speaker(function(level) {
-    //     return nextWord(speakerId, level);
-    // }, distance_between_agents, distance_between_agents));
-    // return;
+    if (DEBUG_ONE) {
+        // just one speaker
+        speakers.push(new Speaker(function (level) {
+            return nextWord(speakerId, level);
+        }, distance_between_agents, distance_between_agents));
 
-    for(let x = -distance_between_agents; x <= distance_between_agents; x = x + distance_between_agents) {
-        for(let y = -distance_between_agents; y <= distance_between_agents; y = y + distance_between_agents) {
-            const id = speakerId++;
+    } else {
+        // all speakers
+        for (let x = -distance_between_agents; x <= distance_between_agents; x = x + distance_between_agents) {
+            for (let y = -distance_between_agents; y <= distance_between_agents; y = y + distance_between_agents) {
+                const id = speakerId++;
 
-            const nextWordCallback = function(level) {
-                const word = nextWord(id, level);
-                return word;
+                const nextWordCallback = function (level) {
+                    const word = nextWord(id, level);
+                    return word;
+                }
+                console.log('coords: ', x, y);
+                speakers.push(new Speaker(nextWordCallback, x, y));
             }
-            console.log('coords: ', x, y);
-            speakers.push(new Speaker(nextWordCallback, x, y));
         }
     }
 }

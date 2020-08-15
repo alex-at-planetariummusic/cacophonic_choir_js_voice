@@ -13,8 +13,23 @@ const DISTANCE_ORIGINAL_THRESHOLD = 9; // currently the closes you can get to th
 // 81 should make it so that there are always at least three agents playing
 const DISTANCE_SILENCE_THRESHOLD = 81;
 // Past this distance, word choice is random (=== MAX_WORD_LEVEL)
-const DISTANCE_RANDOM_THRESHOLD = 21;
+const DISTANCE_RANDOM_THRESHOLD = 20;
 const MAX_WORD_LEVEL = 6;
+
+
+// _panner3D.rolloffFactor
+// larger numbers make for more drastic changes
+const PANNER3D_ROLLOFF_FACTOR = 5;
+
+const MAX_FILTER_MIDI = (new Tone.Midi(7500, 'hz')).toMidi();
+const MIN_FILTER_MIDI = (new Tone.Midi(100, 'hz')).toMidi();
+
+const FILT_SLOPE =  (MAX_FILTER_MIDI - MIN_FILTER_MIDI) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_SILENCE_THRESHOLD);
+const FILT_Y_INTERCEPT = MIN_FILTER_MIDI - (FILT_SLOPE * DISTANCE_SILENCE_THRESHOLD);
+
+function filterFreq(distance) {
+    return (new Tone.Midi(FILT_SLOPE * distance + FILT_Y_INTERCEPT)).toFrequency();
+}
 
 // additional space to add between words. Negative makes them closer together
 const WORD_SPACE_OFFSET_S = -0.13;
@@ -22,13 +37,10 @@ const WORD_SPACE_OFFSET_S = -0.13;
 export class Speaker {
     constructor(getWordCallback, positionX, positionZ) {
         this._getWord = getWordCallback;
-        this._panner3D = new Tone.Panner3D(positionX, 1, positionZ).toMaster();
-
-        // larger numbers make for more drastic changes
-        this._panner3D.rolloffFactor = 10;
-        // this._panner3D.rolloffFactor = 0.8;
-        this.randomAmount = 0;
-        this.wordLevel = 0;
+        this._panner3D = new Tone.Panner3D(positionX, 7.5, positionZ).toMaster();
+        this._panner3D.rolloffFactor = PANNER3D_ROLLOFF_FACTOR;
+        this.randomAmount = 1;
+        this.wordLevel = MAX_WORD_LEVEL;
     }
 
     /**
@@ -50,7 +62,6 @@ export class Speaker {
             this._isPlaying = false;
             if (this._listenInterval === undefined) {
                 // set time to check user's position periodically in order to restart playing
-                console.log('setting the interval');
                 this._listenInterval = setInterval(() => {
                     this.setDistance(this._getDistance());
                 }, 100);
@@ -62,6 +73,7 @@ export class Speaker {
         if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
             this.wordLevel = 0;
             this.randomAmount = 0;
+            // filter not applied, but 
         } else {
             // scale to 0..1
             this.randomAmount = (distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_SILENCE_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD);
@@ -69,16 +81,19 @@ export class Speaker {
             this.wordLevel = Math.min(MAX_WORD_LEVEL, Math.floor(
 (MAX_WORD_LEVEL - 1) * ((distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
             ));
-        }
 
-        // console.log('setDistance; wordLevel: ' + this.wordLevel + ' randomAmount: ' + this.randomAmount);
+            if (distance > DISTANCE_RANDOM_THRESHOLD) {
+                this._filterHz = filterFreq(distance);
+            } else {
+                this._filterHz = 20000;
+            }
+        }
 
         this._startPlayingIfNotPlaying();
     }
 
     _clearIntervalIfItExists() {
         if (this._listenInterval !== undefined) {
-            console.log('Clearing interval!', this._listenInterval);
             clearInterval(this._listenInterval);
             this._listenInterval = undefined;
         }
@@ -104,7 +119,7 @@ export class Speaker {
 
         this._isPlaying = true;
         if (context.state === 'suspended') {
-            console.log('context suspended. wth?')
+            console.log('context suspended. why???')
             context.resume();
         }
         if (!this._nextBufferPromise) {
@@ -196,9 +211,8 @@ export class Speaker {
         grainLength = MIN_GRAIN_LENGTH_S + Math.random() * (MAX_GRAIN_LENGTH_S - MIN_GRAIN_LENGTH_S);
 
         let rand = Math.random();
-        // when randomAmount == 1, 50% chance of repeating grain
-        // when randomAmount == 0, 0% chance of repeating grain
-        if (rand * 2 < this.randomAmount) {
+
+        if (rand < 0.1 + 0.5 * this.randomAmount) {
             //repeat
             nextTime = time;
         } else {
@@ -213,8 +227,14 @@ export class Speaker {
             release: AMP_ENV_RELEASE_TIME
         }).connect(this._panner3D);
 
+
+        // at DISTANCE_RANDOM_THRESHOLD start applying filter
+        const filter = (new Tone.Filter(this._filterHz)).connect(ampEnv);
+
+
         new Tone.Player(buffer.get())
-            .connect(ampEnv)
+            // .connect(ampEnv)
+            .connect(filter)
             .start(undefined, time, grainLength + AMP_ENV_RELEASE_TIME);
 
         let nextAction;
