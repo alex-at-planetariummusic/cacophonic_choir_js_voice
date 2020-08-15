@@ -1,5 +1,8 @@
 import * as Tone from "tone";
 
+// Master gain, db
+const VOLUME_GAIN = 18;
+
 const context = new Tone.Context();
 const AMP_ENV_RELEASE_TIME = 0.1;
 
@@ -37,7 +40,9 @@ const WORD_SPACE_OFFSET_S = -0.13;
 export class Speaker {
     constructor(getWordCallback, positionX, positionZ) {
         this._getWord = getWordCallback;
-        this._panner3D = new Tone.Panner3D(positionX, 7.5, positionZ).toMaster();
+        const volume = new Tone.Volume(VOLUME_GAIN).toMaster();
+        this._panner3D = new Tone.Panner3D(positionX, 7.5, positionZ);
+        this._panner3D.connect(volume);
         this._panner3D.rolloffFactor = PANNER3D_ROLLOFF_FACTOR;
         this.randomAmount = 1;
         this.wordLevel = MAX_WORD_LEVEL;
@@ -73,7 +78,7 @@ export class Speaker {
         if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
             this.wordLevel = 0;
             this.randomAmount = 0;
-            // filter not applied, but 
+            // filter not applied
         } else {
             // scale to 0..1
             this.randomAmount = (distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_SILENCE_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD);
@@ -150,7 +155,7 @@ export class Speaker {
     }
 
     _queueNextWord() {
-        // TODO: if network goes down or something else bad happens, this could loop forever
+        // TODO: if network goes down or something else bad happens, this could loop quickly forever
         this._nextBufferPromise = this._loadBuffer(this._getNextWord())
             .catch(e => {
                 this._queueNextWord();
