@@ -40,7 +40,8 @@ const WORD_SPACE_OFFSET_S = -0.13;
 export class Speaker {
     constructor(getWordCallback, positionX, positionZ) {
         this._getWord = getWordCallback;
-        const volume = new Tone.Volume(VOLUME_GAIN).toMaster();
+        // const volume = new Tone.Volume(VOLUME_GAIN).toMaster();
+        const volume = new Tone.Volume(VOLUME_GAIN).toDestination();
         this._panner3D = new Tone.Panner3D(positionX, 7.5, positionZ);
         this._panner3D.connect(volume);
         this._panner3D.rolloffFactor = PANNER3D_ROLLOFF_FACTOR;
@@ -49,7 +50,7 @@ export class Speaker {
     }
 
     /**
-     * Start the speaker speakeing
+     * Start the speaker speaking
      */
     start() {
         this._startPlayingIfNotPlaying();
@@ -110,9 +111,9 @@ export class Speaker {
     _getDistance() {
         return Math.abs(
             Math.sqrt(
-                Math.pow(Tone.Listener.positionX - this._panner3D.positionX, 2) + 
+                Math.pow(Tone.Listener.positionX.value - this._panner3D.positionX.value, 2) +
                 // Math.pow(Tone.Listener.positionY - this._panner3D.positionY, 2)
-                Math.pow(Tone.Listener.positionZ - this._panner3D.positionZ, 2)
+                Math.pow(Tone.Listener.positionZ.value - this._panner3D.positionZ.value, 2)
             )
         );
     }
@@ -158,12 +159,14 @@ export class Speaker {
         // TODO: if network goes down or something else bad happens, this could loop quickly forever
         this._nextBufferPromise = this._loadBuffer(this._getNextWord())
             .catch(e => {
+                console.log('_nextBufferPromise failed;', e)
                 this._queueNextWord();
             });
-        return this._nextBufferPromise;
+        // return this._nextBufferPromise;
     }
 
-    async _playNextWord() {
+    // async _playNextWord() {
+    _playNextWord() {
         this._nextBufferPromise.then(buffer => {
             if (!this._isPlaying) {
                 return;
@@ -179,6 +182,11 @@ export class Speaker {
         })
     }
 
+    /**
+     * Play the entire buffer
+     * @param buffer
+     * @private
+     */
     _playNextWordFile(buffer) {
         if (!this._isPlaying) {
             return;
@@ -190,7 +198,15 @@ export class Speaker {
             this._playNextWord();
         }
 
-        new Tone.Player(buffer.get()).connect(this._panner3D)
+        // new Tone.Player(buffer.get(),
+        new Tone.Player({
+            url: buffer.get(),
+            onstop: (p) => {
+                // disposing doesn't seem to help with the event leak
+                console.log('on stop', p);
+                p.dispose()
+            }
+        }).connect(this._panner3D)
             .start();
 
         context.setTimeout(() => {
@@ -200,16 +216,16 @@ export class Speaker {
 
     /**
      * @param {Tone.Buffer} buffer - The buffer to play
-     * @param {number} time - Location in buffer to start playing from
+     * @param {number} offsetTime - Location in buffer to start playing from
      */
-    _playGrainLoop(buffer, time) {
-        // Note: circular function calls; call stack will keep growing until word is done playing. 
+    _playGrainLoop(buffer, offsetTime) {
+        // Note: recursive function calls; call stack will keep growing until word is done playing.
         if (!this._isPlaying) {
             return;
         }
 
         let grainLength;
-        let nextTime;
+        let nextOffsetTime;
 
         // calculate the grain length
         // range from MIN_GRAIN_LENGTH_S--MAX_GRAIN_LENGTH_S
@@ -219,9 +235,9 @@ export class Speaker {
 
         if (rand < 0.1 + 0.5 * this.randomAmount) {
             //repeat
-            nextTime = time;
+            nextOffsetTime = offsetTime;
         } else {
-            nextTime = time + grainLength
+            nextOffsetTime = offsetTime + grainLength
         }
 
 
@@ -236,31 +252,41 @@ export class Speaker {
         // at DISTANCE_RANDOM_THRESHOLD start applying filter
         const filter = (new Tone.Filter(this._filterHz)).connect(ampEnv);
 
+        const duration = grainLength + AMP_ENV_RELEASE_TIME
 
-        new Tone.Player(buffer.get())
+        const player = new Tone.Player(buffer.get())
             // .connect(ampEnv)
             .connect(filter)
-            .start(undefined, time, grainLength + AMP_ENV_RELEASE_TIME);
+            .start(undefined, offsetTime, duration);
+
+        // play the grain
+        ampEnv.triggerAttackRelease(grainLength);
+
+        // try cleaning up
+        player.stop('+' + duration);
+        context.setTimeout(() => {
+            // console.log('disposing grain')
+            player.dispose();
+        }, duration)
 
         let nextAction;
         // play next word if the next time would be after the end of the buffer, or 
         // this grain has played to the end of the buffer
-        if (nextTime > buffer.duration || time + grainLength >= buffer.duration) {
+        if (nextOffsetTime > buffer.duration || offsetTime + grainLength >= buffer.duration) {
             nextAction = () => {
                 this._playNextWord();
             };
             context.setTimeout(nextAction, grainLength + WORD_SPACE_OFFSET_S);
+            // context.setTimeout(this._playNextWord, grainLength + WORD_SPACE_OFFSET_S);
         } else {
             // queue the next grain
             context.setTimeout(() => {
                 if (this._isPlaying) {
                     this.setDistance(this._getDistance());
-                    this._playGrainLoop(buffer, nextTime);
+                    this._playGrainLoop(buffer, nextOffsetTime);
                 }
             }, grainLength);
         }
 
-        // play the grain
-        ampEnv.triggerAttackRelease(grainLength);
     }
 }

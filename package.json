@@ -17,7 +17,7 @@
   "private": true,
   "dependencies": {
     "jquery": "^3.5.1",
-    "tone": "^13.8.25"
+    "tone": "^14"
   },
   "scripts": {
     "dev": "webpack --mode development",
