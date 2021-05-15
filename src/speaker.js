@@ -3,7 +3,7 @@ import * as Tone from "tone";
 // Master gain, db
 const VOLUME_GAIN = 18;
 
-const context = new Tone.Context();
+const TONE_CONTEXT = new Tone.Context();
 const AMP_ENV_RELEASE_TIME = 0.1;
 
 // const MIN_GRAIN_LENGTH_S = 0.1;
@@ -11,7 +11,7 @@ const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 
 // Play the original if less than this distance from the agent
-const DISTANCE_ORIGINAL_THRESHOLD = 9; // currently the closes you can get to the agent is about 6.5
+const DISTANCE_ORIGINAL_THRESHOLD = 9; // currently the closest you can get to the agent is about 6.5
 // Past this distance, don't play anything
 // 81 should make it so that there are always at least three agents playing
 const DISTANCE_SILENCE_THRESHOLD = 81;
@@ -27,7 +27,7 @@ const PANNER3D_ROLLOFF_FACTOR = 5;
 const MAX_FILTER_MIDI = (new Tone.Midi(7500, 'hz')).toMidi();
 const MIN_FILTER_MIDI = (new Tone.Midi(100, 'hz')).toMidi();
 
-const FILT_SLOPE =  (MAX_FILTER_MIDI - MIN_FILTER_MIDI) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_SILENCE_THRESHOLD);
+const FILT_SLOPE = (MAX_FILTER_MIDI - MIN_FILTER_MIDI) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_SILENCE_THRESHOLD);
 const FILT_Y_INTERCEPT = MIN_FILTER_MIDI - (FILT_SLOPE * DISTANCE_SILENCE_THRESHOLD);
 
 function filterFreq(distance) {
@@ -74,19 +74,18 @@ export class Speaker {
                 }, 100);
             }
             return;
-        } 
+        }
 
         this._clearIntervalIfItExists();
         if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
             this.wordLevel = 0;
             this.randomAmount = 0;
-            // filter not applied
         } else {
             // scale to 0..1
             this.randomAmount = (distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_SILENCE_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD);
             // scale 1..maxLevel
             this.wordLevel = Math.min(MAX_WORD_LEVEL, Math.floor(
-(MAX_WORD_LEVEL - 1) * ((distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
+                (MAX_WORD_LEVEL - 1) * ((distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
             ));
 
             if (distance > DISTANCE_RANDOM_THRESHOLD) {
@@ -125,14 +124,14 @@ export class Speaker {
         }
 
         this._isPlaying = true;
-        if (context.state === 'suspended') {
-            console.log('context suspended. why???')
-            context.resume();
+        if (TONE_CONTEXT.state === 'suspended') {
+            console.log('TONE_CONTEXT suspended. why???')
+            TONE_CONTEXT.resume();
         }
         if (!this._nextBufferPromise) {
             this._queueNextWord();
         }
-        this._playNextWord();
+        this._scheduleNextWord();
     }
 
 
@@ -143,7 +142,7 @@ export class Speaker {
 
     _loadBuffer(word) {
         if (!bufferPromiseMap[word]) {
-            bufferPromiseMap[word] =new Promise((resolve, reject) => {
+            bufferPromiseMap[word] = new Promise((resolve, reject) => {
                 const buffer = new Tone.Buffer(`./assets/sounds/${word}.mp3`,
                     function () {
                         resolve(buffer);
@@ -170,29 +169,43 @@ export class Speaker {
         // return this._nextBufferPromise;
     }
 
-    // async _playNextWord() {
-    _playNextWord() {
-        this._nextBufferPromise.then(buffer => {
-            if (!this._isPlaying) {
-                return;
-            }
+    /**
+     *
+     * @param {number} when
+     * @return {Promise<void>}
+     * @private
+     */
+    async _scheduleNextWord(when) {
+        if (!this._isPlaying) {
+            return;
+        }
 
-            this.setDistance(this._getDistance());
-            if (this.randomAmount === 0) {
-                this._playNextWordFile(buffer)
-            } else {
-                this._playGrainLoop(buffer, 0)
-            }
-            this._queueNextWord();
-        })
+        const playAt = when || TONE_CONTEXT.currentTime
+
+        const buffer = await this._loadBuffer(this._getNextWord())
+
+        const distance = this._getDistance()
+
+        this.setDistance(distance);
+        console.log('scheduleNetWord distance:', distance)
+
+        if (this.randomAmount === 0) {
+            console.log('_scheduleNextWord; file', when)
+            this._playNextWordFile(playAt, buffer)
+        } else {
+            console.log('_scheduleNextWord; grain', when)
+            this._playGrainLoop(playAt, buffer, 0)
+        }
+        this._queueNextWord();
     }
 
     /**
      * Play the entire buffer
+     * @param when
      * @param buffer
      * @private
      */
-    _playNextWordFile(buffer) {
+    _playNextWordFile(when, buffer) {
         if (!this._isPlaying) {
             return;
         }
@@ -200,7 +213,7 @@ export class Speaker {
         if (!buffer) {
             console.error('no buffer :(');
             debugger;
-            this._playNextWord();
+            this._scheduleNextWord();
         }
 
         // new Tone.Player(buffer.get(),
@@ -208,42 +221,32 @@ export class Speaker {
             url: buffer.get(),
             onstop: (p) => {
                 // disposing doesn't seem to help with the event leak
-                console.log('on stop', p);
-                p.dispose()
+                // console.log('on stop', p);
+                // p.dispose()
             }
         }).connect(this._panner3D)
-            .start();
+            .start(when);
 
-        context.setTimeout(() => {
-            this._playNextWord();
-        }, buffer.duration + WORD_SPACE_OFFSET_S);
-    }
-
-    /**
-     * TODO; don't use recursion in _playGrainLoop. Have _playGrainLoop
-     * @param args
-     * @private
-     */
-    _playGrain(args) {
-
+        setTimeout(() => {
+            this._scheduleNextWord(when + buffer.duration);
+        }, (when - TONE_CONTEXT.currentTime | 0) * 1000);
     }
 
     /**
      * @param {Tone.Buffer} buffer - The buffer to play
      * @param {number} offsetTime - Location in buffer to start playing from
      */
-    _playGrainLoop(buffer, offsetTime) {
+    _playGrainLoop(when, buffer, offsetTime) {
         // Note: recursive function calls; call stack will keep growing until word is done playing.
         if (!this._isPlaying) {
             return;
         }
 
-        let grainLength;
         let nextOffsetTime;
 
         // calculate the grain length
         // range from MIN_GRAIN_LENGTH_S--MAX_GRAIN_LENGTH_S
-        grainLength = MIN_GRAIN_LENGTH_S + Math.random() * (MAX_GRAIN_LENGTH_S - MIN_GRAIN_LENGTH_S);
+        const grainLength = MIN_GRAIN_LENGTH_S + Math.random() * (MAX_GRAIN_LENGTH_S - MIN_GRAIN_LENGTH_S);
 
         let rand = Math.random();
 
@@ -253,7 +256,6 @@ export class Speaker {
         } else {
             nextOffsetTime = offsetTime + grainLength
         }
-
 
         const ampEnv = new Tone.AmplitudeEnvelope({
             attack: 0.01,
@@ -271,36 +273,34 @@ export class Speaker {
         const player = new Tone.Player(buffer.get())
             // .connect(ampEnv)
             .connect(filter)
-            .start(undefined, offsetTime, duration);
+            .start(when, offsetTime, duration);
 
         // play the grain
-        ampEnv.triggerAttackRelease(grainLength);
+        ampEnv.triggerAttackRelease(grainLength, when);
 
-        // try cleaning up
-        player.stop('+' + duration);
-        context.setTimeout(() => {
-            // console.log('disposing grain')
-            player.dispose();
-        }, duration)
+        // // try cleaning up
+        // player.stop('+' + duration);
+        // TONE_CONTEXT.setTimeout(() => {
+        //     // console.log('disposing grain')
+        //     player.dispose();
+        // }, duration)
+
+        const timeoutLength = (when - TONE_CONTEXT.currentTime) * 1000;
 
         let nextAction;
         // play next word if the next time would be after the end of the buffer, or 
         // this grain has played to the end of the buffer
         if (nextOffsetTime > buffer.duration || offsetTime + grainLength >= buffer.duration) {
-            nextAction = () => {
-                this._playNextWord();
-            };
-            context.setTimeout(nextAction, grainLength + WORD_SPACE_OFFSET_S);
-            // context.setTimeout(this._playNextWord, grainLength + WORD_SPACE_OFFSET_S);
+            setTimeout(() => {
+                this._scheduleNextWord(when + grainLength);
+            }, timeoutLength);
+            // TONE_CONTEXT.setTimeout(this._scheduleNextWord, grainLength + WORD_SPACE_OFFSET_S);
         } else {
             // queue the next grain
-            context.setTimeout(() => {
-                if (this._isPlaying) {
-                    this.setDistance(this._getDistance());
-                    this._playGrainLoop(buffer, nextOffsetTime);
-                }
-            }, grainLength);
+            setTimeout(() => {
+                this.setDistance(this._getDistance());
+                this._playGrainLoop(when + grainLength, buffer, nextOffsetTime);
+            }, timeoutLength);
         }
-
     }
 }

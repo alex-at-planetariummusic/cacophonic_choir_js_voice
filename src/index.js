@@ -16,17 +16,15 @@ const listenerX = document.getElementById('listenerX');
 const listenerY = document.getElementById('listenerY');
 const listenerOrientation = document.getElementById('listenerOrientation');
 
-const playWAButton = document.getElementById('playWA');
 
 const listenerTest = document.getElementById("testSimpleLoop")
 
 
 // Initialize the listener
-// Tone.Listener.setPosition(0, 0, 0);
 Tone.Listener.set({
     positionX: 0,
     positionY: 0,
-    positionZ: 0
+    positionZ: 0.1
 });
 
 function setListenerPosition() {
@@ -51,15 +49,6 @@ listenerOrientation.addEventListener('input', function () {
         forwardX: Math.cos(radians),
         forwardY: Math.sin(radians)
     })
-
-    // Tone.Listener.setOrientation(
-    //     Math.cos(radians),
-    //     Math.sin(radians),
-    //     0,
-    //     0,
-    //     0,
-    //     1
-    // );
 })
 
 let randAmt = 0.5;
@@ -125,7 +114,7 @@ async function initializeSpeakers() {
                 const word = nextWord(id, level);
                 return word;
             }
-            console.log('coords: ', x, y);
+            // console.log('coords: ', x, y);
             speakers.push(new Speaker(nextWordCallback, x, y));
         }
     }
@@ -133,13 +122,38 @@ async function initializeSpeakers() {
 
 initializeSpeakers();
 
+////////////////////////////////////////////////////////////////////
+///////////////////// WebAudio test stuff
+////////////////////////////////////////////////////////////////////
+const playWAButton = document.getElementById('playWA');
+const waRandomInput = document.getElementById('WARandom');
 
 const waSpeaker = new WebaudioSpeaker((level) => {
     return nextWord(1, level)
 }, 0, 0)
+
+const waSpeakers = []
+
 playWAButton.addEventListener('click', () => {
-    waSpeaker.start()
+    // waSpeaker.start()
+
+    for (let i = 0; i < 9; i++) {
+        waSpeakers[i] = new WebaudioSpeaker((level) => {
+            return nextWord(i, level)
+        }, 0, 0)
+        waSpeakers[i].start()
+    }
+
 })
+
+waRandomInput.addEventListener('input', () => {
+    const randomAmount = Number(waRandomInput.value)
+    waSpeaker.randomAmount = randomAmount
+    waSpeakers.forEach(s => s.randomAmount = randomAmount)
+})
+
+
+
 
 window.playBuffer = function (buffer) {
     new Tone.Player({
@@ -153,45 +167,6 @@ window.playBuffer = function (buffer) {
     }).toDestination().start()
 }
 
-window.buffer = new Tone.Buffer(`./assets/sounds/music.mp3`,
-    function () {
-        console.log('buffer loaded')
-    },
-    function (e) {
-        // Maybe TODO: keep track of 404s so we don't keep trying to get those words.
-        // Not necessary if we make sure our stories and audio files are in sync.
-        console.log('FAILED TO LOAD BUFFER:', e);
-    }
-);
-
-
-listenerTest.addEventListener('click', testSimpleLoop)
-
-async function testSimpleLoop() {
-    Tone.start()
-    console.log('testSimpleLoop')
-
-    const context = new Tone.Context();
-
-    const loop = new Tone.Loop((time) => {
-        console.log(time);
-        playBuffer(buffer)
-    }, buffer.duration).start(0);
-    Tone.Transport.start();
-
-    function scheduleNext(b, play) {
-        // console.trace()
-        // console.log(b.duration)
-        playBuffer(b)
-        setTimeout(() => scheduleNext(b, play), b.duration * 1000)
-    }
-
-    // scheduleNext(b, play)
-
-    // context.setTimeout(() => {
-    //     play()
-    // }, b.duration);
-}
 
 window.stats = function () {
     console.log('Listener: ', Tone.Listener.positionX, Tone.Listener.positionY);
