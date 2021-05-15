@@ -31,8 +31,9 @@ const FILT_SLOPE =  (MAX_FILTER_MIDI - MIN_FILTER_MIDI) / (DISTANCE_RANDOM_THRES
 const FILT_Y_INTERCEPT = MIN_FILTER_MIDI - (FILT_SLOPE * DISTANCE_SILENCE_THRESHOLD);
 
 function filterFreq(distance) {
-    return (new Tone.Midi(FILT_SLOPE * distance + FILT_Y_INTERCEPT)).toFrequency();
 }
+
+const bufferPromiseMap = {}
 
 // additional space to add between words. Negative makes them closer together
 const WORD_SPACE_OFFSET_S = -0.13;
@@ -141,18 +142,22 @@ export class Speaker {
 
 
     _loadBuffer(word) {
-        return new Promise((resolve, reject) => {
-            const buffer = new Tone.Buffer(`./assets/sounds/${word}.mp3`,
-                function () {
-                    resolve(buffer);
-                },
-                function (e) {
-                    // Maybe TODO: keep track of 404s so we don't keep trying to get those words.
-                    // Not necessary if we make sure our stories and audio files are in sync.
-                    console.log('FAILED TO LOAD BUFFER:', e);
-                    reject(e)
-                });
-        });
+        if (!bufferPromiseMap[word]) {
+            bufferPromiseMap[word] =new Promise((resolve, reject) => {
+                const buffer = new Tone.Buffer(`./assets/sounds/${word}.mp3`,
+                    function () {
+                        resolve(buffer);
+                    },
+                    function (e) {
+                        // Maybe TODO: keep track of 404s so we don't keep trying to get those words.
+                        // Not necessary if we make sure our stories and audio files are in sync.
+                        console.log('FAILED TO LOAD BUFFER:', e);
+                        reject(e)
+                    });
+            });
+        }
+
+        return bufferPromiseMap[word]
     }
 
     _queueNextWord() {
@@ -212,6 +217,15 @@ export class Speaker {
         context.setTimeout(() => {
             this._playNextWord();
         }, buffer.duration + WORD_SPACE_OFFSET_S);
+    }
+
+    /**
+     * TODO; don't use recursion in _playGrainLoop. Have _playGrainLoop
+     * @param args
+     * @private
+     */
+    _playGrain(args) {
+
     }
 
     /**

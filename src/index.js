@@ -2,6 +2,7 @@ import * as Tone from "tone";
 
 import {Speaker} from './speaker';
 import {nextWord, initialize} from './wordpicker';
+import WebaudioSpeaker from "./webaudio-speaker";
 
 window.nextWord = nextWord;
 
@@ -14,6 +15,10 @@ const playOneButton = document.getElementById('playone');
 const listenerX = document.getElementById('listenerX');
 const listenerY = document.getElementById('listenerY');
 const listenerOrientation = document.getElementById('listenerOrientation');
+
+const playWAButton = document.getElementById('playWA');
+
+const listenerTest = document.getElementById("testSimpleLoop")
 
 
 // Initialize the listener
@@ -88,6 +93,7 @@ stopButton.addEventListener('click', function () {
 
 playButton.addEventListener('click', play);
 
+
 let speaker;
 
 async function play() {
@@ -97,6 +103,7 @@ async function play() {
 }
 
 playOneButton.addEventListener('click', playSingleVoice);
+
 async function playSingleVoice() {
     await Tone.start();
     speakers[4].start()
@@ -125,6 +132,66 @@ async function initializeSpeakers() {
 }
 
 initializeSpeakers();
+
+
+const waSpeaker = new WebaudioSpeaker((level) => {
+    return nextWord(1, level)
+}, 0, 0)
+playWAButton.addEventListener('click', () => {
+    waSpeaker.start()
+})
+
+window.playBuffer = function (buffer) {
+    new Tone.Player({
+        url: buffer.get(),
+        onstop: (p) => {
+            // disposing doesn't seem to help with the event leak
+            console.log('on stop', p);
+            p.stop()
+            p.dispose()
+        }
+    }).toDestination().start()
+}
+
+window.buffer = new Tone.Buffer(`./assets/sounds/music.mp3`,
+    function () {
+        console.log('buffer loaded')
+    },
+    function (e) {
+        // Maybe TODO: keep track of 404s so we don't keep trying to get those words.
+        // Not necessary if we make sure our stories and audio files are in sync.
+        console.log('FAILED TO LOAD BUFFER:', e);
+    }
+);
+
+
+listenerTest.addEventListener('click', testSimpleLoop)
+
+async function testSimpleLoop() {
+    Tone.start()
+    console.log('testSimpleLoop')
+
+    const context = new Tone.Context();
+
+    const loop = new Tone.Loop((time) => {
+        console.log(time);
+        playBuffer(buffer)
+    }, buffer.duration).start(0);
+    Tone.Transport.start();
+
+    function scheduleNext(b, play) {
+        // console.trace()
+        // console.log(b.duration)
+        playBuffer(b)
+        setTimeout(() => scheduleNext(b, play), b.duration * 1000)
+    }
+
+    // scheduleNext(b, play)
+
+    // context.setTimeout(() => {
+    //     play()
+    // }, b.duration);
+}
 
 window.stats = function () {
     console.log('Listener: ', Tone.Listener.positionX, Tone.Listener.positionY);
