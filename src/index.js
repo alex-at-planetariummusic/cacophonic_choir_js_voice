@@ -1,4 +1,5 @@
 import * as Tone from "tone";
+import AUDIO_CONTEXT from "./audio_context";
 
 import {Speaker} from './speaker';
 import {nextWord, initialize} from './wordpicker';
@@ -13,12 +14,14 @@ const wordLevelInput = document.getElementById('wordLevel');
 const playButton = document.getElementById('play');
 const playOneButton = document.getElementById('playone');
 const listenerX = document.getElementById('listenerX');
-const listenerY = document.getElementById('listenerY');
+const listenerZ = document.getElementById('listenerZ');
 const listenerOrientation = document.getElementById('listenerOrientation');
 
 
 const listenerTest = document.getElementById("testSimpleLoop")
 
+
+const DISTANCE_BETWEEN_AGENTS = 40;
 
 // Initialize the listener
 Tone.Listener.set({
@@ -27,28 +30,56 @@ Tone.Listener.set({
     positionZ: 0.1
 });
 
+const listener = AUDIO_CONTEXT.listener
+
+
+if (listener.forwardX) {
+    // listener.forwardX.setValueAtTime(0, audioCtx.currentTime);
+    // listener.forwardY.setValueAtTime(0, audioCtx.currentTime);
+    // listener.forwardZ.setValueAtTime(-1, audioCtx.currentTime);
+    // listener.upX.setValueAtTime(0, audioCtx.currentTime);
+    // listener.upY.setValueAtTime(1, audioCtx.currentTime);
+    // listener.upZ.setValueAtTime(0, audioCtx.currentTime);
+    listener.positionX.value = 0
+    listener.positionY.value = 0
+    listener.positionZ.value = 0.1
+} else { // firefox only supports this deprecated way of setting listener position
+    listener.setOrientation(0, 0, -1, 0, 1, 0);
+}
+
 function setListenerPosition() {
     // console.log('setting listener position', listenerX.value, listenerY.value);
     // not sure if casting to Number is necessary
     // Tone.Listener.positionX.targetRampTo(Number(listenerX.value), 10);
     // Tone.Listener.setPosition(Number(listenerX.value), Number(listenerY.value), 0.1);
-    Tone.Listener.set({
-        positionX: Number(listenerX.value),
-        positionY: Number(listenerY.value),
-        positionZ: 0.1
-    });
+    const positionX = Number(listenerX.value)
+    const positionZ = Number(listenerZ.value)
+    // Tone.Listener.set({
+    //     positionX: Number(listenerX.value),
+    //     positionY: Number(listenerY.value),
+    //     positionZ: 0.1
+    // });
+    console.log('position', positionX, positionZ)
+
+    listener.positionX.value = positionX
+    listener.positionZ.value = positionZ
 }
 
 listenerX.addEventListener('input', setListenerPosition);
-listenerY.addEventListener('input', setListenerPosition);
+listenerZ.addEventListener('input', setListenerPosition);
 
 listenerOrientation.addEventListener('input', function () {
     const radians = 2 * Math.PI * (listenerOrientation.value / 360);
+    const forwardX = Math.cos(radians)
+    const forwardY = Math.sin(radians)
 
     Tone.Listener.set({
-        forwardX: Math.cos(radians),
-        forwardY: Math.sin(radians)
+        forwardX: forwardX,
+        forwardY: forwardY
     })
+
+    listener.forwardX.value = forwardX
+    listener.forwardY.value = forwardY
 })
 
 let randAmt = 0.5;
@@ -102,17 +133,15 @@ const speakers = [];
 
 async function initializeSpeakers() {
     await initialize();
-    const distance_between_agents = 40;
     // assumption: center is 0,0
 
     let speakerId = 0;
-    for (let x = -distance_between_agents; x <= distance_between_agents; x = x + distance_between_agents) {
-        for (let y = -distance_between_agents; y <= distance_between_agents; y = y + distance_between_agents) {
+    for (let x = -DISTANCE_BETWEEN_AGENTS; x <= DISTANCE_BETWEEN_AGENTS; x = x + DISTANCE_BETWEEN_AGENTS) {
+        for (let y = -DISTANCE_BETWEEN_AGENTS; y <= DISTANCE_BETWEEN_AGENTS; y = y + DISTANCE_BETWEEN_AGENTS) {
             const id = speakerId++;
 
             const nextWordCallback = function (level) {
-                const word = nextWord(id, level);
-                return word;
+                return nextWord(id, level);
             }
             // console.log('coords: ', x, y);
             speakers.push(new Speaker(nextWordCallback, x, y));
@@ -128,31 +157,28 @@ initializeSpeakers();
 const playWAButton = document.getElementById('playWA');
 const waRandomInput = document.getElementById('WARandom');
 
-const waSpeaker = new WebaudioSpeaker((level) => {
-    return nextWord(1, level)
-}, 0, 0)
-
 const waSpeakers = []
 
 playWAButton.addEventListener('click', () => {
-    // waSpeaker.start()
 
-    for (let i = 0; i < 9; i++) {
-        waSpeakers[i] = new WebaudioSpeaker((level) => {
-            return nextWord(i, level)
-        }, 0, 0)
-        waSpeakers[i].start()
-    }
+    // let speakerId = 0;
+    // for (let x = -DISTANCE_BETWEEN_AGENTS; x <= DISTANCE_BETWEEN_AGENTS; x = x + DISTANCE_BETWEEN_AGENTS) {
+    //     for (let y = -DISTANCE_BETWEEN_AGENTS; y <= DISTANCE_BETWEEN_AGENTS; y = y + DISTANCE_BETWEEN_AGENTS) {
+    //         const id = speakerId++;
+    //
+    //         const nextWordCallback = (level) => nextWord(id, level);
+    //         // const nextWordCallback = function (level) {
+    //         //     return nextWord(id, level);
+    //         // }
+    //         // console.log('coords: ', x, y);
+    //         waSpeakers.push(new WebaudioSpeaker(nextWordCallback, x, y));
+    //     }
+    // }
+    waSpeakers.push(new WebaudioSpeaker((level) => nextWord(1, level), 0, 0));
+
+    waSpeakers.forEach(s => s.start())
 
 })
-
-waRandomInput.addEventListener('input', () => {
-    const randomAmount = Number(waRandomInput.value)
-    waSpeaker.randomAmount = randomAmount
-    waSpeakers.forEach(s => s.randomAmount = randomAmount)
-})
-
-
 
 
 window.playBuffer = function (buffer) {

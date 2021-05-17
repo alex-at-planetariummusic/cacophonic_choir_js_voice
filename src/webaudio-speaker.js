@@ -1,9 +1,9 @@
-import * as Tone from "tone";
+import AUDIO_CONTEXT from "./audio_context";
 
-const AUDIO_CONTEXT = new AudioContext();
 const MAX_WORD_LEVEL = 6;
 const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
+const PANNER_ROLLOFF_FACTOR = 5;
 
 const AUDIO_BUFFER_PROMISES = {}
 
@@ -13,6 +13,12 @@ export default class WebaudioSpeaker {
         this.wordLevel = MAX_WORD_LEVEL;
         // between 0 and 1
         this.randomAmount = 0;
+
+        this._panner = AUDIO_CONTEXT.createPanner()
+        this._panner.positionX.value = positionX
+        this._panner.positionY.value = 7.5
+        this._panner.positionZ.value = positionZ
+        this._panner.rolloffFactor = PANNER_ROLLOFF_FACTOR
     }
 
     async start() {
@@ -54,7 +60,7 @@ export default class WebaudioSpeaker {
     async _scheduleNextSample(when, buffer) {
         const source = AUDIO_CONTEXT.createBufferSource()
         source.buffer = buffer;
-        source.connect(AUDIO_CONTEXT.destination)
+        source.connect(this._panner).connect(AUDIO_CONTEXT.destination)
         source.start(when)
 
         const bufferLengthInSeconds = buffer.length / buffer.sampleRate
