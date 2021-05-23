@@ -1,9 +1,19 @@
 import AUDIO_CONTEXT from "./audio_context";
+import * as Tone from "tone";
 
-const MAX_WORD_LEVEL = 6;
+const LISTENER = AUDIO_CONTEXT.listener
+
 const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 const PANNER_ROLLOFF_FACTOR = 5;
+
+// Play the original if less than this distance from the agent
+const DISTANCE_ORIGINAL_THRESHOLD = 9; // currently the closest you can get to the agent is about 6.5
+// Past this distance, don't play anything
+// 81 should make it so that there are always at least three agents playing
+const DISTANCE_SILENCE_THRESHOLD = 81;
+const DISTANCE_RANDOM_THRESHOLD = 20;
+const MAX_WORD_LEVEL = 6;
 
 const AUDIO_BUFFER_PROMISES = {}
 
@@ -36,11 +46,9 @@ export default class WebaudioSpeaker {
         }
         const playAt = when || AUDIO_CONTEXT.currentTime
 
-        // console.log('scheduling for:', playAt)
-        // console.log('Rand amt:', this.randomAmount)
+        this._updateValues()
 
         const buffer = await this._getBufferPromise(this._getWord(this.wordLevel))
-
 
         if (this.randomAmount === 0) {
             this._scheduleNextSample(playAt, buffer)
@@ -74,7 +82,6 @@ export default class WebaudioSpeaker {
         }, differenceMS)
     }
 
-
     /**
      *
      * @param {number} when - When to play sample. Seconds. Timeframe is AudioContext
@@ -87,7 +94,7 @@ export default class WebaudioSpeaker {
         if (!this._playing) {
             return
         }
-        console.log('scheduling next grain for:', when)
+        // console.log('scheduling next grain for:', when)
 
         // calculate the grain length
         // range from MIN_GRAIN_LENGTH_S--MAX_GRAIN_LENGTH_S
@@ -96,7 +103,7 @@ export default class WebaudioSpeaker {
         // first schedule the grain
         const source = AUDIO_CONTEXT.createBufferSource()
         source.buffer = buffer;
-        source.connect(AUDIO_CONTEXT.destination)
+        source.connect(this._panner).connect(AUDIO_CONTEXT.destination)
         source.start(when, offset, grainLengthSeconds)
 
         // now calucluate the next grain
@@ -112,7 +119,6 @@ export default class WebaudioSpeaker {
             nextOffsetTime = offset + grainLengthSeconds
         }
 
-        let nextAction;
         const differenceMS = ((when - nowSeconds) * 1000) || 1
         // play next word if the next time would be after the end of the buffer, or
         // this grain has played to the end of the buffer
@@ -141,8 +147,35 @@ export default class WebaudioSpeaker {
         return AUDIO_BUFFER_PROMISES[word]
     }
 
-    _playWord() {
+    _updateValues() {
+        const distance = Math.abs(
+            Math.sqrt(
+                Math.pow(LISTENER.positionX.value - this._panner.positionX.value, 2) +
+                Math.pow(LISTENER.positionZ.value - this._panner.positionZ.value, 2)
+            )
+        );
 
+        // TODO: silence if distance is > a certain threshold
+
+        if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
+            this.wordLevel = 0;
+            this.randomAmount = 0;
+        } else {
+            // scale to 0..1
+            this.randomAmount = (distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_SILENCE_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD);
+            // scale 1..maxLevel
+            this.wordLevel = Math.min(MAX_WORD_LEVEL, Math.floor(
+                (MAX_WORD_LEVEL - 1) * ((distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
+            ));
+            // if (distance > DISTANCE_RANDOM_THRESHOLD) {
+            //     this._filterHz = filterFreq(distance);
+            // } else {
+            //     this._filterHz = 20000;
+            // }
+        }
+        console.log("distance:", distance)
+        console.log("randomAmount:", this.randomAmount)
+        console.log("wordLevel:", this.wordLevel)
     }
 
 }
