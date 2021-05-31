@@ -35,13 +35,13 @@ function dbloaded() {
 
 
 function speaker_init() {
-    var keys = Object.keys(stories);
-    var speaker = new Object();
-    speaker.current_story = stories[keys[ keys.length * Math.random() << 0]];
+    const keys = Object.keys(stories);
+    const speaker = {};
+    speaker.current_story = stories[keys[Math.floor(keys.length * Math.random())]];
     speaker.story_text = [];
     speaker.story_word_id = 0;
     for (var j = 0; j < model_name_array.length; j++) {
-        var text = speaker.current_story[model_name_array[j]].join(" ").toLowerCase().split(" ");
+        var text = speaker.current_story[model_name_array[j]].join(" ").toLowerCase().split(/\W+/);
         speaker.story_text.push(text);
     }
     return speaker;
@@ -49,7 +49,7 @@ function speaker_init() {
 
 
 function random_word(wordlist){
-    return wordlist[wordlist.length * Math.random() << 0]
+    return wordlist[Math.floor(wordlist.length * Math.random())]
 }
 
 function current_story_word(distance, speaker) {
@@ -76,8 +76,11 @@ function nextWord(id, distance){
     if (distance >= maxDistance) {
         return random_word(speakers[id].story_text[0]);
     } else {
-            const potential_word = current_story_word(distance,speakers[id]);
+            const potential_word = current_story_word(distance, speakers[id]);
             iterate_story_word(id);
+            if (!potential_word || potential_word.trim().length === 0) {
+                debugger
+            }
             return potential_word;
     }
 }

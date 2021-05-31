@@ -1,7 +1,7 @@
-import * as Tone from "tone";
+// import * as Tone from "tone";
 import AUDIO_CONTEXT from "./audio_context";
 
-import {Speaker} from './speaker';
+// import {Speaker} from './speaker';
 import {nextWord, initialize} from './wordpicker';
 import WebaudioSpeaker from "./webaudio-speaker";
 
@@ -17,18 +17,16 @@ const listenerX = document.getElementById('listenerX');
 const listenerZ = document.getElementById('listenerZ');
 const listenerOrientation = document.getElementById('listenerOrientation');
 
-
 const listenerTest = document.getElementById("testSimpleLoop")
-
 
 const DISTANCE_BETWEEN_AGENTS = 40;
 
-// Initialize the listener
-Tone.Listener.set({
-    positionX: 0,
-    positionY: 0,
-    positionZ: 0.1
-});
+// // Initialize the listener
+// Tone.Listener.set({
+//     positionX: 0,
+//     positionY: 0,
+//     positionZ: 0.1
+// });
 
 const listener = AUDIO_CONTEXT.listener
 
@@ -73,10 +71,10 @@ listenerOrientation.addEventListener('input', function () {
     const forwardX = Math.cos(radians)
     const forwardY = Math.sin(radians)
 
-    Tone.Listener.set({
-        forwardX: forwardX,
-        forwardY: forwardY
-    })
+    // Tone.Listener.set({
+    //     forwardX: forwardX,
+    //     forwardY: forwardY
+    // })
 
     listener.forwardX.value = forwardX
     listener.forwardY.value = forwardY
@@ -118,14 +116,14 @@ let speaker;
 
 async function play() {
     console.log('PLAY!!!');
-    await Tone.start();
+    // await Tone.start();
     speakers.forEach(s => s.start());
 }
 
 playOneButton.addEventListener('click', playSingleVoice);
 
 async function playSingleVoice() {
-    await Tone.start();
+    // await Tone.start();
     speakers[4].start()
 }
 
@@ -144,7 +142,7 @@ async function initializeSpeakers() {
                 return nextWord(id, level);
             }
             // console.log('coords: ', x, y);
-            speakers.push(new Speaker(nextWordCallback, x, y));
+            speakers.push(new WebaudioSpeaker(nextWordCallback, x, y));
         }
     }
 }
@@ -177,31 +175,13 @@ playWAButton.addEventListener('click', () => {
     waSpeakers.push(new WebaudioSpeaker((level) => nextWord(1, level), 0, 0));
 
     waSpeakers.forEach(s => s.start())
-
 })
 
+waRandomInput.addEventListener('input', () => {
+    const val = Number(Number(waRandomInput.value))
+    console.log('Setting randAmount to:', val)
+    waSpeakers.forEach(s => {
+        s.randomAmount = val
+    })
 
-window.playBuffer = function (buffer) {
-    new Tone.Player({
-        url: buffer.get(),
-        onstop: (p) => {
-            // disposing doesn't seem to help with the event leak
-            console.log('on stop', p);
-            p.stop()
-            p.dispose()
-        }
-    }).toDestination().start()
-}
-
-
-window.stats = function () {
-    console.log('Listener: ', Tone.Listener.positionX, Tone.Listener.positionY);
-    console.log('active speakers: ' + speakers.filter(s => {
-        if (s._isPlaying) {
-            console.log('playing:', s);
-            return true;
-        } else {
-            return false;
-        }
-    }).length);
-}
+})

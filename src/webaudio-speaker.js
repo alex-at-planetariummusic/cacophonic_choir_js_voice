@@ -1,5 +1,4 @@
 import AUDIO_CONTEXT from "./audio_context";
-import * as Tone from "tone";
 
 const LISTENER = AUDIO_CONTEXT.listener
 
@@ -44,7 +43,8 @@ export default class WebaudioSpeaker {
         if (!this._playing) {
             return
         }
-        const playAt = when || AUDIO_CONTEXT.currentTime
+        // current sound set has 0.05 silence at beginning...
+        const playAt = (when || AUDIO_CONTEXT.currentTime) - 0.05
 
         this._updateValues()
 
@@ -72,6 +72,8 @@ export default class WebaudioSpeaker {
         source.start(when)
 
         const bufferLengthInSeconds = buffer.length / buffer.sampleRate
+
+        console.log(`Scheduled at ${when}; Sample length is ${bufferLengthInSeconds}; so next scheduled time should be ${when + bufferLengthInSeconds}`)
 
         const nowSeconds = AUDIO_CONTEXT.currentTime
         const differenceMS = ((when - nowSeconds) * 1000) || 1
@@ -103,10 +105,21 @@ export default class WebaudioSpeaker {
         // first schedule the grain
         const source = AUDIO_CONTEXT.createBufferSource()
         source.buffer = buffer;
-        source.connect(this._panner).connect(AUDIO_CONTEXT.destination)
+
+        const gainNode = AUDIO_CONTEXT.createGain()
+
+        const AD_ENV_LENGTH = 0.1;
+        // const AD_ENV_LENGTH = 0.5 * grainLengthSeconds;
+
+        gainNode.gain.setValueAtTime(0, when)
+            .linearRampToValueAtTime(1, when + AD_ENV_LENGTH)
+            .setValueAtTime(0, when + grainLengthSeconds - AD_ENV_LENGTH)
+            .linearRampToValueAtTime(0, when + grainLengthSeconds)
+
+        source.connect(this._panner).connect(gainNode).connect(AUDIO_CONTEXT.destination)
         source.start(when, offset, grainLengthSeconds)
 
-        // now calucluate the next grain
+        // now calculate the next grain
         const nowSeconds = AUDIO_CONTEXT.currentTime
 
         let nextOffsetTime;

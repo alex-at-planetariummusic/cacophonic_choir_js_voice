@@ -15,10 +15,7 @@
   "author": "alex@planetariummusic.com",
   "license": "MIT",
   "private": true,
-  "dependencies": {
-    "jquery": "^3.5.1",
-    "tone": "^14"
-  },
+  "dependencies": {},
   "scripts": {
     "dev": "webpack --mode development",
     "devWatch": "webpack --watch --mode development",
