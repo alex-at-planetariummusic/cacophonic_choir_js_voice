@@ -1,6 +1,6 @@
 import AUDIO_CONTEXT from "./audio_context";
+import UniversalListener from "./UniversalListener";
 
-const LISTENER = AUDIO_CONTEXT.listener
 
 const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
@@ -73,7 +73,7 @@ export default class WebaudioSpeaker {
 
         const bufferLengthInSeconds = buffer.length / buffer.sampleRate
 
-        console.log(`Scheduled at ${when}; Sample length is ${bufferLengthInSeconds}; so next scheduled time should be ${when + bufferLengthInSeconds}`)
+        // console.log(`Scheduled at ${when}; Sample length is ${bufferLengthInSeconds}; so next scheduled time should be ${when + bufferLengthInSeconds}`)
 
         const nowSeconds = AUDIO_CONTEXT.currentTime
         const differenceMS = ((when - nowSeconds) * 1000) || 1
@@ -163,8 +163,8 @@ export default class WebaudioSpeaker {
     _updateValues() {
         const distance = Math.abs(
             Math.sqrt(
-                Math.pow(LISTENER.positionX.value - this._panner.positionX.value, 2) +
-                Math.pow(LISTENER.positionZ.value - this._panner.positionZ.value, 2)
+                Math.pow(UniversalListener.positionX - this._panner.positionX.value, 2) +
+                Math.pow(UniversalListener.positionZ - this._panner.positionZ.value, 2)
             )
         );
 
@@ -186,9 +186,9 @@ export default class WebaudioSpeaker {
             //     this._filterHz = 20000;
             // }
         }
-        console.log("distance:", distance)
-        console.log("randomAmount:", this.randomAmount)
-        console.log("wordLevel:", this.wordLevel)
+        // console.log("distance:", distance)
+        // console.log("randomAmount:", this.randomAmount)
+        // console.log("wordLevel:", this.wordLevel)
     }
 
 }

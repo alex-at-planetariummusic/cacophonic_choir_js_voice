@@ -5,6 +5,8 @@ import AUDIO_CONTEXT from "./audio_context";
 import {nextWord, initialize} from './wordpicker';
 import WebaudioSpeaker from "./webaudio-speaker";
 
+import UniversalListener from "./UniversalListener";
+
 window.nextWord = nextWord;
 
 const stopButton = document.getElementById('stop');
@@ -21,46 +23,14 @@ const listenerTest = document.getElementById("testSimpleLoop")
 
 const DISTANCE_BETWEEN_AGENTS = 40;
 
-// // Initialize the listener
-// Tone.Listener.set({
-//     positionX: 0,
-//     positionY: 0,
-//     positionZ: 0.1
-// });
 
-const listener = AUDIO_CONTEXT.listener
+UniversalListener.setPosition(0, 0, 0.1)
 
-
-if (listener.forwardX) {
-    // listener.forwardX.setValueAtTime(0, audioCtx.currentTime);
-    // listener.forwardY.setValueAtTime(0, audioCtx.currentTime);
-    // listener.forwardZ.setValueAtTime(-1, audioCtx.currentTime);
-    // listener.upX.setValueAtTime(0, audioCtx.currentTime);
-    // listener.upY.setValueAtTime(1, audioCtx.currentTime);
-    // listener.upZ.setValueAtTime(0, audioCtx.currentTime);
-    listener.positionX.value = 0
-    listener.positionY.value = 0
-    listener.positionZ.value = 0.1
-} else { // firefox only supports this deprecated way of setting listener position
-    listener.setOrientation(0, 0, -1, 0, 1, 0);
-}
 
 function setListenerPosition() {
-    // console.log('setting listener position', listenerX.value, listenerY.value);
-    // not sure if casting to Number is necessary
-    // Tone.Listener.positionX.targetRampTo(Number(listenerX.value), 10);
-    // Tone.Listener.setPosition(Number(listenerX.value), Number(listenerY.value), 0.1);
     const positionX = Number(listenerX.value)
     const positionZ = Number(listenerZ.value)
-    // Tone.Listener.set({
-    //     positionX: Number(listenerX.value),
-    //     positionY: Number(listenerY.value),
-    //     positionZ: 0.1
-    // });
-    console.log('position', positionX, positionZ)
-
-    listener.positionX.value = positionX
-    listener.positionZ.value = positionZ
+    UniversalListener.setPosition(positionX, undefined, positionZ)
 }
 
 listenerX.addEventListener('input', setListenerPosition);
@@ -71,20 +41,13 @@ listenerOrientation.addEventListener('input', function () {
     const forwardX = Math.cos(radians)
     const forwardY = Math.sin(radians)
 
-    // Tone.Listener.set({
-    //     forwardX: forwardX,
-    //     forwardY: forwardY
-    // })
-
-    listener.forwardX.value = forwardX
-    listener.forwardY.value = forwardY
+    UniversalListener.setOrientation(forwardX, forwardY)
 })
 
 let randAmt = 0.5;
 
 randAmtInput.addEventListener('input', function (v) {
     randAmt = randAmtInput.value;
-    // console.log('randAmtInput:', randAmtInput.value);
     if (speaker) {
         speaker.randomAmount = Number(randAmt);
     }
@@ -123,7 +86,6 @@ async function play() {
 playOneButton.addEventListener('click', playSingleVoice);
 
 async function playSingleVoice() {
-    // await Tone.start();
     speakers[4].start()
 }
 
