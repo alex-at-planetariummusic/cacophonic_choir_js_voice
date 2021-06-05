@@ -6,6 +6,15 @@ const MIN_GRAIN_LENGTH_S = 0.05;
 const MAX_GRAIN_LENGTH_S = 0.4;
 const PANNER_ROLLOFF_FACTOR = 5;
 
+/**
+ * Adjust the time between words by this amount
+ */
+const WORD_SQUISH_AMOUNT_S = -0.1
+/**
+ * Adjust the time between grains by this amount
+ */
+const GRAIN_SQUISH_AMOUNT_S = -0.05
+
 // Play the original if less than this distance from the agent
 const DISTANCE_ORIGINAL_THRESHOLD = 9; // currently the closest you can get to the agent is about 6.5
 // Past this distance, don't play anything
@@ -80,7 +89,7 @@ export default class WebaudioSpeaker {
 
         // schedule the next next word at the same time we play the word
         setTimeout(() => {
-            this._scheduleNextWord(when + bufferLengthInSeconds)
+            this._scheduleNextWord(when + bufferLengthInSeconds + WORD_SQUISH_AMOUNT_S)
         }, differenceMS)
     }
 
@@ -108,15 +117,18 @@ export default class WebaudioSpeaker {
 
         const gainNode = AUDIO_CONTEXT.createGain()
 
-        const AD_ENV_LENGTH = 0.1;
-        // const AD_ENV_LENGTH = 0.5 * grainLengthSeconds;
+        // const AD_ENV_LENGTH = 0.1;
+        const AD_ENV_LENGTH = 0.05 * grainLengthSeconds;
 
         gainNode.gain.setValueAtTime(0, when)
             .linearRampToValueAtTime(1, when + AD_ENV_LENGTH)
-            .setValueAtTime(0, when + grainLengthSeconds - AD_ENV_LENGTH)
+            .setValueAtTime(1, when + grainLengthSeconds - AD_ENV_LENGTH) // maybe not needed?
             .linearRampToValueAtTime(0, when + grainLengthSeconds)
 
-        source.connect(gainNode).connect(this._panner).connect(AUDIO_CONTEXT.destination)
+        source
+            .connect(gainNode)
+            .connect(this._panner)
+            .connect(AUDIO_CONTEXT.destination)
         source.start(when, offset, grainLengthSeconds)
 
         // now calculate the next grain
@@ -138,13 +150,12 @@ export default class WebaudioSpeaker {
         if (nextOffsetTime > buffer.duration || offset + grainLengthSeconds >= buffer.duration) {
             // schedule the next word
             setTimeout(() => {
-                this._scheduleNextWord(when + grainLengthSeconds, buffer);
+                this._scheduleNextWord(when + grainLengthSeconds);
             }, differenceMS)
         } else {
             // queue the next grain
             setTimeout(() => {
-                // this.setDistance(this._getDistance());
-                this._scheduleNextGrain(when + grainLengthSeconds, buffer, nextOffsetTime);
+                this._scheduleNextGrain(when + grainLengthSeconds + GRAIN_SQUISH_AMOUNT_S, buffer, nextOffsetTime);
             }, differenceMS);
         }
 

@@ -30,7 +30,7 @@ UniversalListener.setPosition(0, 0, 0.1)
 function setListenerPosition() {
     const positionX = Number(listenerX.value)
     const positionZ = Number(listenerZ.value)
-    UniversalListener.setPosition(positionX, undefined, positionZ)
+    UniversalListener.setPosition(positionX, 7.5, positionZ)
 }
 
 listenerX.addEventListener('input', setListenerPosition);
