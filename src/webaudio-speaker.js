@@ -44,7 +44,7 @@ export default class WebaudioSpeaker {
             return
         }
         // current sound set has 0.05 silence at beginning...
-        const playAt = (when || AUDIO_CONTEXT.currentTime) - 0.05
+        const playAt = when ? when - 0.05 :  AUDIO_CONTEXT.currentTime
 
         this._updateValues()
 
@@ -116,7 +116,7 @@ export default class WebaudioSpeaker {
             .setValueAtTime(0, when + grainLengthSeconds - AD_ENV_LENGTH)
             .linearRampToValueAtTime(0, when + grainLengthSeconds)
 
-        source.connect(this._panner).connect(gainNode).connect(AUDIO_CONTEXT.destination)
+        source.connect(gainNode).connect(this._panner).connect(AUDIO_CONTEXT.destination)
         source.start(when, offset, grainLengthSeconds)
 
         // now calculate the next grain

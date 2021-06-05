@@ -13,38 +13,38 @@ class UniversalListener {
 
     setPosition(x, y, z) {
         this.positionX = x;
-        if (y !== undefined) {
-            this.positionY = y;
-        }
+        this.positionY = y;
         this.positionZ = z;
 
-        this._setPosition(this.positionX, this.positionY, this.positionZ);
+        this._setPosition();
     }
 
-    setOrientation(forwardX, forwardY) {
+    setOrientation(forwardX, forwardY, forwardZ) {
         this.forwardX = forwardX
         this.forwardY = forwardY
-        this._setOrientation(forwardX, forwardY)
+        this.forwardZ = forwardZ
+        this._setOrientation()
     }
 }
 
 UniversalListener.prototype._setPosition = FIREFOX ?
-    function (x, y, z) {
-        LISTENER.setOrientation(x, y, z, 0, 1, 0);
+    function () {
+        LISTENER.setPosition(this.positionX, this.positionY, this.positionZ);
     } :
-    function (x, y, z) {
-        LISTENER.positionX.value = x
-        LISTENER.positionY.value = y
-        LISTENER.positionZ.value = z
+    function () {
+        LISTENER.positionX.value = this.positionX
+        LISTENER.positionY.value = this.positionY
+        LISTENER.positionZ.value = this.positionZ
     };
 
 UniversalListener.prototype._setOrientation = FIREFOX ?
-    function (forwardX, forwardY) {
-        LISTENER.setOrientation(forwardX, forwardY, -1, 0, 1, 0)
+    function () {
+        LISTENER.setOrientation(this.forwardX, this.forwardY, this.forwardZ, 0, 1, 0)
     } :
-    function (forwardX, forwardY) {
-        LISTENER.forwardX.value = forwardX
-        LISTENER.forwardY.value = forwardY
+    function () {
+        LISTENER.forwardX.value = this.forwardX
+        LISTENER.forwardY.value = this.forwardY
+        LISTENER.forwardZ.value = this.forwardZ
     }
 
 export default new UniversalListener()

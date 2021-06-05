@@ -1,4 +1,5 @@
 import Speaker from './webaudio-speaker'
+import UniversalListener from "./UniversalListener";
 import { nextWord, initialize } from './wordpicker';
 import AUDIO_CONTEXT from "./audio_context";
 
@@ -7,19 +8,13 @@ const AGENT_HEIGHT = 7.5;
 
 let playing = false;
 
-const LISTENER = AUDIO_CONTEXT.listener
-LISTENER.positionY.value = AGENT_HEIGHT
-LISTENER.forwardY.value = 0
-
 window.setListenerPosition = function(x, z, orientationDegrees) {
-    LISTENER.positionX.value = x;
-    LISTENER.positionZ.value = z;
-
     const radians = 2 * Math.PI * (orientationDegrees / 360);
     const xOrientation = -Math.sin(radians);
     const zOrientation = -Math.cos(radians);
-    LISTENER.forwardX.value = xOrientation
-    LISTENER.forwardZ.value = zOrientation
+
+    UniversalListener.setOrientation(xOrientation, 0, zOrientation)
+    UniversalListener.setPosition(x, AGENT_HEIGHT, z)
 }
 
 async function play() {
@@ -27,6 +22,7 @@ async function play() {
         console.log('play!!!');
         playing = true;
         toggleAudioButton.textContent = "Pause audio";
+        await AUDIO_CONTEXT.resume()
         speakers.forEach(s => s.start());
     }
 }
@@ -75,7 +71,6 @@ async function initializeSpeakers() {
                 const nextWordCallback = (level) => {
                     return nextWord(id, level);
                 }
-                console.log('coords: ', x, y);
                 speakers.push(new Speaker(nextWordCallback, x, y));
             }
         }

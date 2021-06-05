@@ -38,10 +38,10 @@ listenerZ.addEventListener('input', setListenerPosition);
 
 listenerOrientation.addEventListener('input', function () {
     const radians = 2 * Math.PI * (listenerOrientation.value / 360);
-    const forwardX = Math.cos(radians)
-    const forwardY = Math.sin(radians)
+    const forwardX = -Math.cos(radians)
+    const forwardZ = -Math.sin(radians)
 
-    UniversalListener.setOrientation(forwardX, forwardY)
+    UniversalListener.setOrientation(forwardX, 0, forwardZ)
 })
 
 let randAmt = 0.5;
@@ -79,7 +79,7 @@ let speaker;
 
 async function play() {
     console.log('PLAY!!!');
-    // await Tone.start();
+    await AUDIO_CONTEXT.resume()
     speakers.forEach(s => s.start());
 }
 
