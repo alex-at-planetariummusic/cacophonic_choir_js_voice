@@ -57,6 +57,19 @@ export default class WebaudioSpeaker {
 
         this._updateValues()
 
+        //
+        if (this._distance > DISTANCE_SILENCE_THRESHOLD) {
+            const differenceMS = ((playAt - AUDIO_CONTEXT.currentTime) * 1000) || 1
+            // hoow long to wait to queue the next word
+            const waitTimeS = 1;
+
+            setTimeout(() => {
+                this._scheduleNextWord(playAt + waitTimeS)
+            }, differenceMS)
+            return
+        }
+
+
         const buffer = await this._getBufferPromise(this._getWord(this.wordLevel))
 
         if (this.randomAmount === 0) {
@@ -64,6 +77,10 @@ export default class WebaudioSpeaker {
         } else {
             this._scheduleNextGrain(playAt, buffer, 0)
         }
+    }
+
+    _skipWord(when) {
+
     }
 
     /**
@@ -172,7 +189,7 @@ export default class WebaudioSpeaker {
     }
 
     _updateValues() {
-        const distance = Math.abs(
+        this._distance = Math.abs(
             Math.sqrt(
                 Math.pow(UniversalListener.positionX - this._panner.positionX.value, 2) +
                 Math.pow(UniversalListener.positionZ - this._panner.positionZ.value, 2)
@@ -181,25 +198,22 @@ export default class WebaudioSpeaker {
 
         // TODO: silence if distance is > a certain threshold
 
-        if (distance <= DISTANCE_ORIGINAL_THRESHOLD) {
+        if (this._distance <= DISTANCE_ORIGINAL_THRESHOLD) {
             this.wordLevel = 0;
             this.randomAmount = 0;
         } else {
             // scale to 0..1
-            this.randomAmount = (distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_SILENCE_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD);
+            this.randomAmount = (this._distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_SILENCE_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD);
             // scale 1..maxLevel
             this.wordLevel = Math.min(MAX_WORD_LEVEL, Math.floor(
-                (MAX_WORD_LEVEL - 1) * ((distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
+                (MAX_WORD_LEVEL - 1) * ((this._distance - DISTANCE_ORIGINAL_THRESHOLD) / (DISTANCE_RANDOM_THRESHOLD - DISTANCE_ORIGINAL_THRESHOLD)) + 1
             ));
-            // if (distance > DISTANCE_RANDOM_THRESHOLD) {
-            //     this._filterHz = filterFreq(distance);
+            // if (this._distance > DISTANCE_RANDOM_THRESHOLD) {
+            //     this._filterHz = filterFreq(this._distance);
             // } else {
             //     this._filterHz = 20000;
             // }
         }
-        // console.log("distance:", distance)
-        // console.log("randomAmount:", this.randomAmount)
-        // console.log("wordLevel:", this.wordLevel)
     }
 
 }

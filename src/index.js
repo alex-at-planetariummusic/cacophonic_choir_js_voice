@@ -86,7 +86,7 @@ async function play() {
 playOneButton.addEventListener('click', playSingleVoice);
 
 async function playSingleVoice() {
-    speakers[4].start()
+    speakers[0].start()
 }
 
 const speakers = [];
