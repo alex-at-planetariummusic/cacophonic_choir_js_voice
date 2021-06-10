@@ -8,10 +8,18 @@ const AGENT_HEIGHT = 7.5;
 
 let playing = false;
 
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+
+gtag('js', new Date());
+gtag('config', 'G-XSVNPW5ZMC');
+
 window.setListenerPosition = function(x, z, orientationDegrees) {
     const radians = 2 * Math.PI * (orientationDegrees / 360);
     const xOrientation = -Math.sin(radians);
     const zOrientation = -Math.cos(radians);
+
+    gtag('event', 'position', { 'radians': radians, 'xOrientation': xOrientation, 'zOrientation': zOrientation });
 
     UniversalListener.setOrientation(xOrientation, 0, zOrientation)
     UniversalListener.setPosition(x, AGENT_HEIGHT, z)
@@ -51,6 +59,8 @@ const DEBUG_ONE = false;
 
 async function initializeSpeakers() {
     await initialize();
+    gtag('event', 'speakers', { 'value': 1 });
+
     const distance_between_agents = 40;
     // center is 0,0
 
@@ -84,6 +94,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     toggleAudioButton = document.getElementById('toggleAudio');
     toggleAudioButton.addEventListener('click', function() {
+        gtag('event', 'playbutton', { 'value': playing });
         playing ? stop() : play();
     });
 });
