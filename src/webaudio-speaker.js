@@ -181,6 +181,7 @@ export default class WebaudioSpeaker {
 
     async _getBufferPromise(word) {
         if (!AUDIO_BUFFER_PROMISES[word]) {
+            //const response = await fetch(`./assets/processedmp3/${word}.mp3`)
             const response = await fetch(`./assets/sounds/${word}.mp3`)
             const arrayBuffer = await response.arrayBuffer()
             AUDIO_BUFFER_PROMISES[word] = AUDIO_CONTEXT.decodeAudioData(arrayBuffer)

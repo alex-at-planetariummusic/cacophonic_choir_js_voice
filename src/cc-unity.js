@@ -1,4 +1,4 @@
-import Speaker from './webaudio-speaker'
+import WebaudioSpeaker from './webaudio-speaker'
 import UniversalListener from "./UniversalListener";
 import { nextWord, initialize } from './wordpicker';
 import AUDIO_CONTEXT from "./audio_context";
@@ -68,7 +68,7 @@ async function initializeSpeakers() {
 
     if (DEBUG_ONE) {
         // just one speaker
-        speakers.push(new Speaker(function (level) {
+        speakers.push(new WebaudioSpeaker(function (level) {
             return nextWord(speakerId, level);
         }, distance_between_agents, distance_between_agents));
 
@@ -81,7 +81,7 @@ async function initializeSpeakers() {
                 const nextWordCallback = (level) => {
                     return nextWord(id, level);
                 }
-                speakers.push(new Speaker(nextWordCallback, x, y));
+                speakers.push(new WebaudioSpeaker(nextWordCallback, x, y));
             }
         }
     }
