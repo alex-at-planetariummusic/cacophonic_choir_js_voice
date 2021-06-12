@@ -5,6 +5,9 @@ import AUDIO_CONTEXT from "./audio_context";
 
 const speakers = [];
 const AGENT_HEIGHT = 7.5;
+//const radians = 0;
+//const xOrientation = 0;
+//const zOrientation = -1;
 
 let playing = false;
 
@@ -51,6 +54,10 @@ function stop() {
     speakers.forEach(s => s.stop());
 }
 
+function switchVoice() {
+    speakers.forEach(s => s.switchVoice());
+}
+
 // for debugging
 window.play = play;
 
@@ -65,6 +72,8 @@ async function initializeSpeakers() {
     // center is 0,0
 
     let speakerId = 0;
+    
+    let direct = Math.round(Math.random())
 
     if (DEBUG_ONE) {
         // just one speaker
@@ -81,7 +90,7 @@ async function initializeSpeakers() {
                 const nextWordCallback = (level) => {
                     return nextWord(id, level);
                 }
-                speakers.push(new WebaudioSpeaker(nextWordCallback, x, y));
+                speakers.push(new WebaudioSpeaker(nextWordCallback, x, y, direct));
             }
         }
     }
@@ -89,6 +98,7 @@ async function initializeSpeakers() {
 initializeSpeakers();
 
 let toggleAudioButton;
+let switchVoiceButton;
 
 document.addEventListener("DOMContentLoaded", function(){
 
@@ -96,6 +106,11 @@ document.addEventListener("DOMContentLoaded", function(){
     toggleAudioButton.addEventListener('click', function() {
         gtag('event', 'playbutton', { 'value': playing });
         playing ? stop() : play();
+    });
+    
+    switchVoiceButton = document.getElementById('switchVoice');
+    switchVoiceButton.addEventListener('click', function() {
+        switchVoice();
     });
 });
 

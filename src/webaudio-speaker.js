@@ -26,9 +26,11 @@ const MAX_WORD_LEVEL = 6;
 const AUDIO_BUFFER_PROMISES = {}
 
 export default class WebaudioSpeaker {
-    constructor(getWordCallback, positionX, positionZ) {
+    constructor(getWordCallback, positionX, positionZ, directID = 0) {
         this._getWord = getWordCallback;
         this.wordLevel = MAX_WORD_LEVEL;
+        this.directID = directID;
+        this.DIRECTORY = ['sounds', 'processedmp3'];
         // between 0 and 1
         this.randomAmount = 0;
 
@@ -46,6 +48,10 @@ export default class WebaudioSpeaker {
 
     stop() {
         this._playing = false;
+    }
+    
+    switchVoice() {
+    	this.directID = Math.abs(this.directID - 1);
     }
 
     async _scheduleNextWord(when) {
@@ -70,7 +76,7 @@ export default class WebaudioSpeaker {
         }
 
 
-        const buffer = await this._getBufferPromise(this._getWord(this.wordLevel))
+        const buffer = await this._getBufferPromise(this._getWord(this.wordLevel), this.DIRECTORY[this.directID])
 
         if (this.randomAmount === 0) {
             this._scheduleNextSample(playAt, buffer)
@@ -179,10 +185,9 @@ export default class WebaudioSpeaker {
 
     }
 
-    async _getBufferPromise(word) {
+    async _getBufferPromise(word, direct) {
         if (!AUDIO_BUFFER_PROMISES[word]) {
-            //const response = await fetch(`./assets/processedmp3/${word}.mp3`)
-            const response = await fetch(`./assets/sounds/${word}.mp3`)
+            const response = await fetch(`./assets/${direct}/${word}.mp3`)
             const arrayBuffer = await response.arrayBuffer()
             AUDIO_BUFFER_PROMISES[word] = AUDIO_CONTEXT.decodeAudioData(arrayBuffer)
         }
