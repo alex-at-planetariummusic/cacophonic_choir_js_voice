@@ -76,17 +76,17 @@ export default class WebaudioSpeaker {
         }
 
 
-        const buffer = await this._getBufferPromise(this._getWord(this.wordLevel), this.DIRECTORY[this.directID])
-
-        if (this.randomAmount === 0) {
-            this._scheduleNextSample(playAt, buffer)
-        } else {
-            this._scheduleNextGrain(playAt, buffer, 0)
+        try {
+            const buffer = await this._getBufferPromise(this._getWord(this.wordLevel), this.DIRECTORY[this.directID])
+            if (this.randomAmount === 0) {
+                this._scheduleNextSample(playAt, buffer)
+            } else {
+                this._scheduleNextGrain(playAt, buffer, 0)
+            }
+        } catch (e) {
+            console.log("could not find word: ", e)
+            this._scheduleNextWord(when)
         }
-    }
-
-    _skipWord(when) {
-
     }
 
     /**

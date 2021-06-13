@@ -78,9 +78,6 @@ function nextWord(id, distance){
     } else {
             const potential_word = current_story_word(distance, speakers[id]);
             iterate_story_word(id);
-            if (!potential_word || potential_word.trim().length === 0) {
-                debugger
-            }
             return potential_word;
     }
 }
