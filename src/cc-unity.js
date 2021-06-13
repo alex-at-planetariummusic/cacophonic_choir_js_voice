@@ -56,6 +56,7 @@ function stop() {
 }
 
 function switchVoice() {
+    WebaudioSpeaker.clearCachedAudioBuffers();
     speakers.forEach(s => s.switchVoice());
 }
 

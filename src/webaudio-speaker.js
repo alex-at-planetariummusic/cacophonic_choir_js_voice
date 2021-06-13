@@ -23,7 +23,7 @@ const DISTANCE_SILENCE_THRESHOLD = 81;
 const DISTANCE_RANDOM_THRESHOLD = 20;
 const MAX_WORD_LEVEL = 6;
 
-const AUDIO_BUFFER_PROMISES = {}
+let AUDIO_BUFFER_PROMISES = {}
 
 export default class WebaudioSpeaker {
     constructor(getWordCallback, positionX, positionZ, directID = 0) {
@@ -53,6 +53,11 @@ export default class WebaudioSpeaker {
     switchVoice() {
     	this.directID = Math.abs(this.directID - 1);
     }
+
+    static clearCachedAudioBuffers() {
+        AUDIO_BUFFER_PROMISES = {};
+    }
+
 
     async _scheduleNextWord(when) {
         if (!this._playing) {
