@@ -5,9 +5,6 @@ import AUDIO_CONTEXT from "./audio_context";
 
 const speakers = [];
 const AGENT_HEIGHT = 7.5;
-//const radians = 0;
-//const xOrientation = 0;
-//const zOrientation = -1;
 
 let playing = false;
 
@@ -16,6 +13,10 @@ function gtag(){dataLayer.push(arguments);}
 
 gtag('js', new Date());
 gtag('config', 'G-XSVNPW5ZMC');
+
+// put the user someplace to start
+UniversalListener.setOrientation(0, 0, 0)
+UniversalListener.setPosition(0, AGENT_HEIGHT, 0)
 
 window.setListenerPosition = function(x, z, orientationDegrees) {
     const radians = 2 * Math.PI * (orientationDegrees / 360);
